@@ -1,0 +1,49 @@
+Package: geomix
+Type: Package
+Title: GeoMix: Bayesian Spatial Mixture Modelling for Offshore Site Characterisation
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Bradley", "Wakefield",
+      email = "bradleyw@uow.edu.au",
+      role = c("aut", "cre")
+    )
+  )
+Description: Tools for fitting GeoMix models for spatial classification and
+    prediction using Bayesian hierarchical mixture models. The package
+    combines Potts latent class models, grouped Vecchia Gaussian process
+    approximations, custom NIMBLE samplers, posterior prediction, and MCMC
+    diagnostic utilities. Developed for offshore ground characterisation
+    using geophysical and geotechnical data.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+    R (>= 4.3.0)
+Imports:
+    nimble,
+    future,
+    future.apply,
+    parallel,
+    stringr,
+    dplyr,
+    magrittr,
+    tidyr,
+    purrr,
+    tibble,
+    ggplot2,
+    posterior,
+    bayesplot,
+    GpGp,
+    FNN,
+    proxy,
+    clue,
+    abind
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
