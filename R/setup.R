@@ -184,7 +184,7 @@
 #' `setupVecchiaGeoMix()`, `getNeighbours()`
 #'
 #' @export
-setupGeoMixModel <- function(data, K, dims, variables = NULL, 
+setupGeoMixModel <- function(data, K, dims, variables = NULL,
                              aformula = ~1,
                              beta = 1.29, diagonals = 0,
                              kappa = 0.90, w_tol = 0.001,
@@ -201,25 +201,25 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     groups = NULL
   )
   variables <- modifyList(default_variables, variables %||% list())
-  
-  if(identical(aformula,~1)) aformula <- ~ zeros
-  X <- model.matrix(aformula,data.frame(data,zeros = rep(0,nrow(data))))
+
+  #if(identical(aformula,~1)) aformula <- ~ zeros
+  X <- model.matrix(aformula,data)
   p <- ncol(X)
-  
+
   default_hyperparams <- list(
-    a_tau = 4, b_tau = 2, 
-    a_sigma = 3, b_sigma = 4, 
+    a_tau = 4, b_tau = 2,
+    a_sigma = 3, b_sigma = 4,
     a_L = 3, b_L = 5,
     a_D = 3, b_D = 8,
     sigma_h = 1,
     gamma0 = rep(1, K),
     m_alpha = rep(0,p),  Q_alpha = 0.01*diag(p)
   )
-  
+
   hyperparams <- modifyList(default_hyperparams, hyperparams %||% list())
-  
+
   penalty <- penalty %||% (1 - diag(K))
-  
+
   default_mcmc <- list(
     niter = 2500,
     thin = 10,
@@ -228,26 +228,26 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     retain_draws = TRUE
   )
   mcmc_control <- modifyList(default_mcmc, mcmc_control %||% list())
-  
+
   default_HMC <- list(nLeap = 10, eps = 0.015, h = 1e-3, mass = 1.0, m = m)
   HMC_control <- modifyList(default_HMC, HMC_control %||% list())
-  
+
   lattice <- mutate(expand.grid(lapply(dims,seq,from = 1)),latticeID = 1:n(),.before = everything())
   colnames(lattice) <- c("latticeID",variables$dID,variables$xID,variables$yID)
-  lattice <- left_join(lattice,select(data,c(variables$dID,variables$xID,variables$yID,variables$loc)))
-  
-  data <- data %>% 
+  lattice <- suppressMessages(left_join(lattice,select(data,c(variables$dID,variables$xID,variables$yID,variables$loc))))
+
+  data <- data %>%
     left_join(select(lattice,variables$dID,variables$xID,variables$yID,latticeID),
-              by = c(variables$dID,variables$xID,variables$yID)) %>% 
-    relocate(latticeID) %>% ungroup() %>% arrange(latticeID) %>% 
-    mutate(rowID = 1:n(),.before = everything()) 
-  
+              by = c(variables$dID,variables$xID,variables$yID)) %>%
+    relocate(latticeID) %>% ungroup() %>% arrange(latticeID) %>%
+    mutate(rowID = 1:n(),.before = everything())
+
   N1 <- nrow(data)
   Z2ind <- match(data$rowID[which(!is.na(data[[variables$Z2]]))],1:N1)
   N2 <- length(Z2ind)
-  
+
   depth_vec <- sort(unique(data[[variables$depth]]))
-  
+
   rank_dist <- select(data,variables$dID,variables$xID,variables$yID)
 
   grouping <- variables$groups
@@ -270,22 +270,24 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
       grouping <- variables$groups
     }
     vecchia <- setupVecchiaGeoMix(rank_dist[Z2ind,], m = m, groups = groups)
+  }else{
+    HMC_control$m  <- vecchia$constants$m
   }
-  
+
   #Confusion Setup
-  loc_df <- data %>% 
-    select(rowID,loc=variables$loc,x=variables$x, y=variables$y) %>% 
-    group_by(loc,x,y) %>% 
-    summarise(minD = min(rowID), 
-              maxD = max(rowID),.groups="drop") %>% 
+  loc_df <- data %>%
+    select(rowID,loc=variables$loc,x=variables$x, y=variables$y) %>%
+    group_by(loc,x,y) %>%
+    summarise(minD = min(rowID),
+              maxD = max(rowID),.groups="drop") %>%
     arrange(loc)
-  
-  locStack <- as.matrix(select(loc_df,minD,maxD)) 
+
+  locStack <- as.matrix(select(loc_df,minD,maxD))
   udistD <- as.matrix(dist(depth_vec))
   udistL <- as.matrix(dist(loc_df[,c("x","y")]))
   dID <- match(data[[variables$depth]],depth_vec)
   locID <- match(data[[variables$loc]],loc_df$loc)
-  
+
   #Potts Prior
   neighbours0 <- getNeighbours(dims = dims, diagonals = diagonals)
   neigh_df <- neighbours0[data$latticeID,]
@@ -294,13 +296,13 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
   neighbours <- t(apply(neigh_df,1,function(x) c(x[x>0], x[x==0])))
   neighbourNum <- apply(neighbours>0,1,sum)
   weights <- weights %||% matrix(1, nrow = nrow(data), ncol = ncol(neighbours))
-  
+
   constantsPotts <- list(
     w_tol = w_tol,
     delta_depth = min(diff(depth_vec)),
-    neighbourID = neighbours,         
-    neighbourNum = neighbourNum,         
-    weights = weights,           
+    neighbourID = neighbours,
+    neighbourNum = neighbourNum,
+    weights = weights,
     penalty = penalty,
     beta = beta,
     Z2_flag = (!is.na(data[[variables$Z2]])),
@@ -308,7 +310,7 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     groupDeps =  vecchia$groupDeps,
     groupDepL =   vecchia$groupDepL
   )
-  
+
   constants <- list(
     N2 = N2,
     N1 = N1,
@@ -318,13 +320,13 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     L = nrow(udistL),
     Z2_ind = Z2ind,
     kappa = kappa
-  ) 
+  )
   constants <- c(constants,vecchia$constants)
-  
+
   constantsM <- c(constants, hyperparams)
-  
+
   initialY1 <- sample(1:K,N1,replace = T)
-  
+
   default_inits <- list(
     Y1 = initialY1,
     sigma2 = rep(5,K),
@@ -337,13 +339,13 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     h = 1
   )
   inits <- modifyList(default_inits, inits %||% list())
-  
+
   if(fix_lateral){
     FlagL <- as.integer(inits$lL != 0)
   }else{
     FlagL <- rep(1L,K)
   }
-  
+
   data_list <- list(
     Z2 = data[[variables$Z2]][Z2ind],
     Z1 = data[[variables$Z1]],
@@ -358,7 +360,7 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     groupNum = vecchia$groupNum,
     groupNeighbours = vecchia$groupNeighbours
   )
-  
+
   return(list(
     constants = constantsM,
     constantsPotts = constantsPotts,

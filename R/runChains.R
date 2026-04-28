@@ -123,7 +123,7 @@ run_chains <- function(geomix_setup,
                        load_previous_state = FALSE,
                        mc.cores = NULL,
                        seed = 16) {
-
+  message('Processing data...',appendLF = F)
   `%||%` <- function(a,b) if(!is.null(a)) a else b
   make_batch_sizes <- function(niter, nbatches) {
     q <- niter %/% nbatches
@@ -215,11 +215,19 @@ run_chains <- function(geomix_setup,
     }
     if (inputs$LGFM) {
       local_GibbsSampler <- GibbsSamplerLGFM
-      local_code <- codeLGFM
+      if(geomix_local$constants$p == 1){
+        local_code <- codeLGFMp1
+      }else{
+        local_code <- codeLGFM
+      }
       geomix_local$controlGibbs$Z1 <- geomix_local$data_list$Z1
     }else{
       local_GibbsSampler <- GibbsSampler
-      local_code <- code
+      if(geomix_local$constants$p == 1){
+        local_code <- codep1
+      }else{
+        local_code <- code
+      }
     }
 
     if (!inputs$load_previous_state) {
@@ -282,33 +290,34 @@ run_chains <- function(geomix_setup,
         saveRDS(geomix_local, file.path(dir, "geomix_setup_reloaded.rds"))
       }
     }
-
-    model <- nimble::nimbleModel(
+    message('Done.')
+    message('Building model...', appendLF = F)
+    model <- suppressMessages({nimble::nimbleModel(
       local_code,
       constants   = geomix_local$constants,
       data        = geomix_local$data_list,
       inits       = geomix_local$inits,
       buildDerivs = FALSE
-    )
+    )})
 
-    Cmodel <- nimble::compileNimble(model)
-    conf <- nimble::configureMCMC(model)
-
+    Cmodel <- suppressMessages({nimble::compileNimble(model)})
+    message('Done.')
+    message('Setting up samplers...',appendLF = F)
+    conf <- nimble::configureMCMC(model, print = FALSE)
     conf$replaceSampler(
       target  = "Y1",
       type    = local_GibbsSampler,
       control = geomix_local$controlGibbs
     )
-
     conf$replaceSampler(
       target  = "alpha",
       type    = alphaGibbsSampler,
-      control = NULL
+      control = list(m_alpha = geomix_local$constants$m_alpha,
+                     Q_alpha = geomix_local$constants$Q_alpha)
     )
 
     scalarTargets <- c("tau2", "sigma2_L", "sigma2_D", "h")
     scalarTargetsExpanded <- model$expandNodeNames(scalarTargets)
-
     for (tar in scalarTargetsExpanded) {
       conf$replaceSampler(
         target  = tar,
@@ -319,7 +328,6 @@ run_chains <- function(geomix_setup,
 
     Z2scalarTargets <- c("sigma2", "lL", "lD")
     Z2scalarTargetsExpanded <- model$expandNodeNames(Z2scalarTargets)
-
     noUpdate <- character(0)
     if (!is.null(geomix_local$fix_lateral)) {
       if (geomix_local$fix_lateral) {
@@ -345,16 +353,16 @@ run_chains <- function(geomix_setup,
       }
     }
 
-    conf$addMonitors(c("Y1", "lL", "lD"))
+    conf$addMonitors(c("Y1", "lL", "lD"), print = FALSE)
     if (inputs$LGFM) {
-      conf$addMonitors(c("logProb_Z2"))
+      conf$addMonitors(c("logProb_Z2"), print = FALSE)
     } else {
-      conf$addMonitors(c("logProb_Z1", "logProb_Z2"))
+      conf$addMonitors(c("logProb_Z1", "logProb_Z2"), print = FALSE)
     }
-
     mcmc  <- nimble::buildMCMC(conf)
-    Cmcmc <- nimble::compileNimble(mcmc, project = model)
-
+    Cmcmc <- suppressMessages(nimble::compileNimble(mcmc, project = model))
+    message('Done.')
+    message('Running samples...')
     bseq <- seq_len(inputs$controlMCMC$nbatches) + batch_start - 1
     retained_batches <- if (inputs$controlMCMC$retain_draws) vector("list", length(bseq)) else NULL
 
@@ -378,7 +386,7 @@ run_chains <- function(geomix_setup,
 
       cat("Chain", chain, ": completed batch", b, "(", inputs$batch_sizes[i], "iterations)\n")
     }
-
+    message('Done.')
     retained_draws_mat <- if (inputs$controlMCMC$retain_draws) do.call(rbind, retained_batches) else NULL
 
     list(

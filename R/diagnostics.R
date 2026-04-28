@@ -23,19 +23,6 @@
 #' @param exclude Optional character vector of parameter names to exclude from
 #'   diagnostics after chain matrices are constructed. Defaults to `NULL`.
 #'
-#' @param plot_variables Character vector specifying parameter groups to include
-#'   in representative diagnostic plots. Defaults to
-#'   `c("alpha0","alpha1","sigma2","lL","lD","tau2","sigma2_L","sigma2_D","gamma","h","logProb")`.
-#'
-#' @param plot_classes Integer vector of class indices used when selecting
-#'   class-specific parameters (such as `sigma2[k]`, `lL[k]`, `lD[k]`) for
-#'   plotting. Defaults to `c(1,2)`.
-#'
-#' @param plot_gamma Integer matrix with two columns specifying off-diagonal
-#'   gamma parameters to include in plots. Each row corresponds to one
-#'   `gammaMat[i,j]` pair. Defaults to
-#'   `rbind(c(1,2), c(1,3), c(2,1), c(2,3))`.
-#'
 #' @param Y1index Optional integer vector giving selected lattice indices of
 #'   latent labels `Y1` to use when producing class-count trace plots.
 #'   Defaults to all columns of sampled `Y1`.
@@ -77,9 +64,14 @@
 #'
 #'   \item{plots}{Diagnostic `ggplot2` / `bayesplot` objects.}
 #'   \describe{
-#'     \item{trace_acf}{List containing representative trace plots,
-#'     autocorrelation plots, and selected parameter names.}
-#'     \item{rank}{Rank histogram overlay plot for selected parameters.}
+#'     \item{trace_alpha_acf}{List containing representative trace plots and
+#'     autocorrelation plots of the alpha parameters.}
+#'     \item{trace_cov_acf}{List containing representative trace plots and
+#'     autocorrelation plots of the class specific covariance parameters.}
+#'     \item{trace_gamma_acf}{List containing representative trace plots and
+#'     autocorrelation plots of the gamma parameters.}
+#'     \item{trace_other_acf}{List containing representative trace plots and
+#'     autocorrelation plots of the other parameters.}
 #'     \item{logProb}{Trace plots of log-posterior components by chain.}
 #'     \item{Y1}{Trace plots of sampled latent class counts over iterations.}
 #'   }
@@ -108,8 +100,7 @@
 #' # Multiple chains
 #' out <- run_mcmc_diagnostics(
 #'   params_list = list(chain1, chain2, chain3),
-#'   name = "GeoMix",
-#'   plot_classes = c(1, 4)
+#'   name = "GeoMix"
 #' )
 #'
 #' # View worst mixing parameters
@@ -125,11 +116,7 @@
 #' @export
 #'
 run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
-                                 exclude = NULL,
-                                 plot_variables = c("alpha0","alpha1","sigma2","lL","lD","tau2","sigma2_L","sigma2_D","gamma","h","logProb"),
-                                 plot_classes = c(1,2),
-                                 plot_gamma = rbind(c(1,2),c(1,3),c(2,1),c(2,3)),
-                                 Y1index = NULL) {
+                                 exclude = NULL, Y1index = NULL) {
 
   ## ============================================================
   ## GeoMix MCMC diagnostics (supplementary)
@@ -206,11 +193,13 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
       sigma2_D   = to_iter_matrix(s$sigma2_D,   "sigma2_D"),
       sigma2 = to_iter_matrix(s$sigma2, "sigma2"),
       lL     = to_iter_matrix(s$lL,     "lL"),
-      lD     = to_iter_matrix(s$lD,     "lD"),
-      alpha0 = to_iter_matrix(s$a0,     "alpha0"),
-      alpha1 = to_iter_matrix(s$a1,     "alpha1")
+      lD     = to_iter_matrix(s$lD,     "lD")
     )
-
+    alpha_list <- list()
+    for(j in 1:p){
+      alpha_list[[paste0("alpha",j-1)]] <- s[[paste0("a",j-1)]]
+    }
+    mats <- c(mats,alpha_list)
     if (name != "LGFM") {
       gamma_mat <- as.matrix(s$gamma)
       h_mat     <- to_iter_matrix(s$h, "h")
@@ -395,10 +384,11 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
 
     p1 <- bayesplot::mcmc_trace(dsel) +
       ggtitle(paste0(title_prefix, "Trace plots"))+
-      geom_line(alpha = 0.2)
+      geom_line(alpha = 0.2)+default_theme
 
     p2 <- bayesplot::mcmc_acf(dsel, lags = 50) +
-      ggtitle(paste0(title_prefix, "Autocorrelation"))
+      ggtitle(paste0(title_prefix, "Autocorrelation"))+
+      default_theme
 
     list(
       trace = p1,
@@ -491,23 +481,17 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
   ## ------------------------------------------------------------
   ## 4) Representative multi-chain plots
   ## ------------------------------------------------------------
-  class_vars <- c("alpha0","alpha1","sigma2","lL","lD")
-  other_vars <- c("tau2","sigma2_L","sigma2_D","h")
-  class_vars <- plot_variables[(plot_variables %in% class_vars)]
-  other_vars <- plot_variables[(plot_variables %in% other_vars)]
-
-  rep_pars <- c(paste0(rep(paste0(class_vars,"["),each=length(plot_classes)),
-                       rep(plot_classes,length(class_vars)),"]"),other_vars)
-  if("gamma" %in% plot_variables){
-  gamma_names <- posterior::variables(draws_arr)
-  gamma_str <- paste0("^gammaMat\\[",plot_gamma[,1],", ",plot_gamma[,2],"\\]$")
-  gamma_keep <- sapply(gamma_str,function(x) grep(x, gamma_names, value = TRUE))
-  rep_pars <- unique(c(rep_pars, gamma_keep))
-  }
+  var_names <- posterior::variables(draws_arr)
+  alpha_names <- var_names[grep("alpha",var_names)]
+  cov_names <- var_names[grep("sigma2|lL|lD",var_names)]
+  gamma_names <- var_names[grep("gamma",var_names)]
+  other_names <- setdiff(var_names,c(alpha_names,cov_names,gamma_names))
 
   plots <- list(
-    trace_acf = plot_trace_acf(draws_arr, rep_pars, title_prefix = paste0(name, ": ")),
-    rank = plot_rank_overlay(draws_arr, rep_pars, title_prefix = paste0(name, ": "))
+    trace_alpha_acf = plot_trace_acf(draws_arr, alpha_names, title_prefix = paste0(name, ": alpha parameters")),
+    trace_cov_acf = plot_trace_acf(draws_arr, cov_names, title_prefix = paste0(name, ": covariance parameters")),
+    trace_other_acf = plot_trace_acf(draws_arr, other_names, title_prefix = paste0(name, ": other parameters")),
+    trace_gamma_acf = plot_trace_acf(draws_arr, gamma_names, title_prefix = paste0(name, ": gamma parameters"))
   )
 
   ## ------------------------------------------------------------
@@ -549,10 +533,6 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
     facet_wrap(vars(name),scales = "free_y")+
     theme_bw()+default_theme +
     theme(legend.position = "bottom")+
-    scale_x_continuous(breaks = c(0,250,500),
-                       labels = \(x) if_else(x==500,
-                                             paste0(format(x*10, big.mark = ","),'  '),
-                                             format(x*10, big.mark = ",") ))+
     labs(y="Count",x="Iteration", col = "Chain")
 
   Y1countplot <-
@@ -578,7 +558,8 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
       chain_diagnostics = chain_diags,
       overall_diagnostics = overall_diags,
       worst_rhat = worst_rhat,
-      worst_ess = worst_ess
+      worst_ess = worst_ess,
+      Y1count = Y1count
     ),
     summaries = list(
       key_stats_text = key_stats_text,

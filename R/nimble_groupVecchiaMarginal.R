@@ -471,7 +471,253 @@ rGPgroupvec_margAlpha <- nimble::nimbleFunction(
   }
 )
 
+#' Density for the grouped Gaussian process intercept-only model with alpha integrated out.
+#'
+#' Internal NIMBLE distribution for the grouped Gaussian process likelihood
+#' after marginalising over regression coefficients when p = 1.
+#'
+#' @param x Numeric response vector.
+#' @param m_alpha Numeric prior mean vector for regression coefficients.
+#' @param V_alpha Numeric prior covariance matrix for regression coefficients.
+#' @param sigma2 Numeric vector of class process variances.
+#' @param tau2 Numeric scalar noise variance.
+#' @param lL Numeric vector of lateral range parameters.
+#' @param lD Numeric vector of depth range parameters.
+#' @param LFlag Numeric vector indicating lateral correlation usage.
+#' @param Y1 Numeric vector of latent class labels.
+#' @param X Design matrix.
+#' @param K Integer scalar giving the number of classes.
+#' @param Z2_ind Numeric vector of indices for observed `Z2` values.
+#' @param dID Numeric vector of depth identifiers.
+#' @param locID Numeric vector of location identifiers.
+#' @param distD Numeric matrix of depth distances.
+#' @param distL Numeric matrix of lateral distances.
+#' @param m Integer scalar giving the maximum conditioning set size.
+#' @param groupLookup Numeric matrix of group membership indices.
+#' @param groupNum Numeric vector of group sizes.
+#' @param groupNeighbours Numeric matrix of neighbour indices for each group.
+#' @param log Integer scalar; if `1`, return the log-density.
+#'
+#' @return A numeric scalar giving the density or log-density.
+#'
+#' @keywords internal
+dGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
+  run = function(x = double(1),
+                 m_alpha = double(0),
+                 V_alpha = double(0),
+                 sigma2 = double(1), tau2 = double(0),
+                 lL = double(1), lD = double(1),
+                 LFlag = double(1),
+                 Y1 = double(1), X = double(1),
+                 K = integer(0), Z2_ind = double(1),
+                 dID = double(1), locID = double(1),
+                 distD = double(2), distL = double(2),
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2),
+                 log = integer(0)) {
+    returnType(double(0))
+    m_alphaVec <- numeric(1)
+    m_alphaVec[1] <- m_alpha
+    V_alphaMat <- matrix(V_alpha, nrow = 1, ncol = 1)
+    XMat <- matrix(X, nrow = length(X), ncol = 1)
+    log_terms <- evaluateGroupGPvec_margAlpha(Z2 = x,
+                                              m_alpha = m_alphaVec,
+                                              V_alpha = V_alphaMat,
+                                              sigma2 = sigma2, tau2 = tau2,
+                                              lL = lL, LFlag = LFlag, lD = lD,
+                                              Y1 = Y1, X = XMat, K = K, Z2_ind = Z2_ind,
+                                              dID = dID, locID = locID,
+                                              distD = distD, distL = distL,
+                                              m = m, groupLookup = groupLookup,
+                                              groupNum = groupNum,
+                                              groupNeighbours = groupNeighbours)
+    logDens <- sum(log_terms)
+    if(log) return(logDens) else return(exp(logDens))
+  })
 
+#' Random generation from the grouped Gaussian process intercept-only model with alpha integrated out
+#'
+#' Internal NIMBLE random-generation function for simulating from the grouped
+#' Gaussian process model after marginalising over regression coefficients with p = 1.
+#'
+#' @param n Integer scalar giving the number of draws.
+#' @param m_alpha Numeric prior mean vector for regression coefficients.
+#' @param V_alpha Numeric prior covariance matrix for regression coefficients.
+#' @param sigma2 Numeric vector of class process variances.
+#' @param tau2 Numeric scalar noise variance.
+#' @param lL Numeric vector of lateral range parameters.
+#' @param lD Numeric vector of depth range parameters.
+#' @param LFlag Numeric vector indicating lateral correlation usage.
+#' @param Y1 Numeric vector of latent class labels.
+#' @param X Design matrix.
+#' @param K Integer scalar giving the number of classes.
+#' @param Z2_ind Numeric vector of indices for observed `Z2` values.
+#' @param dID Numeric vector of depth identifiers.
+#' @param locID Numeric vector of location identifiers.
+#' @param distD Numeric matrix of depth distances.
+#' @param distL Numeric matrix of lateral distances.
+#' @param m Integer scalar giving the maximum conditioning set size.
+#' @param groupLookup Numeric matrix of group membership indices.
+#' @param groupNum Numeric vector of group sizes.
+#' @param groupNeighbours Numeric matrix of neighbour indices for each group.
+#'
+#' @return A numeric vector of simulated responses.
+#'
+#' @keywords internal
+rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
+  run = function(n = integer(0),
+                 m_alpha = double(0),
+                 V_alpha = double(0),
+                 sigma2 = double(1), tau2 = double(0),
+                 lL = double(1), lD = double(1),
+                 LFlag = double(1),
+                 Y1 = double(1), X = double(1),
+                 K = integer(0), Z2_ind = double(1),
+                 dID = double(1), locID = double(1),
+                 distD = double(2), distL = double(2),
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2)) {
+
+    returnType(double(1))
+
+    if(n != 1) print("rGPgroupvec_margAlpha only supports n = 1")
+
+    N2 <- length(Z2_ind)
+    Z2 <- numeric(N2, init = FALSE)
+
+    Y1_valid <- Y1[Z2_ind]
+    dIDv <- dID[Z2_ind]
+    locIDv <- locID[Z2_ind]
+
+    G <- length(groupNum)
+    p <- 1
+    m_alphaVec <- numeric(1)
+    m_alphaVec[1] <- m_alpha
+    V_alphaMat <- matrix(V_alpha, nrow = 1, ncol = 1)
+    XMat <- matrix(X, nrow = length(X), ncol = 1)
+
+    for(j in 1:G){
+
+      grp_size <- groupNum[j]
+      if(j > 1) cum_grp_size <- sum(groupNum[1:(j-1)]) else cum_grp_size <- 0
+      grp_inds <- groupLookup[j, 1:grp_size]
+
+      nb_size0 <- min(m, cum_grp_size)
+      if(nb_size0 == 0) nb_inds <- numeric(0) else nb_inds <- groupNeighbours[j, 1:nb_size0]
+
+      for(k in 1:K){
+
+        kcheck <- sum(Y1_valid[grp_inds] == k)
+
+        if(kcheck > 0){
+
+          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]
+          nb_indsk  <- nb_inds[which(Y1_valid[nb_inds] == k)]
+
+          ng <- length(grp_indsk)
+          nk <- length(nb_indsk)
+
+          Xg <- XMat[grp_indsk, 1:p]
+          mg <- Xg %*% asCol(m_alphaVec)
+
+          if(nk == 0){
+
+            # unconditional draw
+
+            if(LFlag[k] == 0){
+              r2_gg <- distD[dIDv[grp_indsk], dIDv[grp_indsk]] / lD[k]^2
+            } else {
+              r2_gg <- distL[locIDv[grp_indsk], locIDv[grp_indsk]] / lL[k]^2 +
+                distD[dIDv[grp_indsk], dIDv[grp_indsk]] / lD[k]^2
+            }
+
+            r_gg <- sqrt(r2_gg)
+            K_gg <- sigma2[k] * (1 + sqrt(3)*r_gg) * exp(-sqrt(3)*r_gg) +
+              tau2 * diag(ng)
+
+            K_gg <- K_gg + Xg %*% V_alphaMat[1:p,1:p] %*% t(Xg)
+
+            chol_i <- chol(K_gg)
+            z <- rnorm(ng)
+            draw <- mg + chol_i %*% z
+
+          } else {
+
+            # conditional draw
+
+            Xn <- XMat[nb_indsk, 1:p]
+            mn <- Xn %*% asCol(m_alphaVec)
+
+            # K_nn
+            if(LFlag[k] == 0){
+              r2_nn <- distD[dIDv[nb_indsk], dIDv[nb_indsk]] / lD[k]^2
+            } else {
+              r2_nn <- distL[locIDv[nb_indsk], locIDv[nb_indsk]] / lL[k]^2 +
+                distD[dIDv[nb_indsk], dIDv[nb_indsk]] / lD[k]^2
+            }
+
+            r_nn <- sqrt(r2_nn)
+            K_nn <- sigma2[k] * (1 + sqrt(3)*r_nn) * exp(-sqrt(3)*r_nn) +
+              tau2 * diag(nk)
+
+            K_nn <- K_nn + Xn %*% V_alphaMat[1:p,1:p] %*% t(Xn)
+
+            # K_ng
+            if(LFlag[k] == 0){
+              r2_ng <- distD[dIDv[nb_indsk], dIDv[grp_indsk]] / lD[k]^2
+            } else {
+              r2_ng <- distL[locIDv[nb_indsk], locIDv[grp_indsk]] / lL[k]^2 +
+                distD[dIDv[nb_indsk], dIDv[grp_indsk]] / lD[k]^2
+            }
+
+            r_ng <- sqrt(r2_ng)
+            K_ng <- sigma2[k] * (1 + sqrt(3)*r_ng) * exp(-sqrt(3)*r_ng)
+
+            if(nk == 1) K_ng <- matrix(K_ng, nrow = nk, ncol = ng)
+
+            K_ng <- K_ng + Xn %*% V_alphaMat[1:p,1:p] %*% t(Xg)
+
+            # K_gg
+            if(LFlag[k] == 0){
+              r2_gg <- distD[dIDv[grp_indsk], dIDv[grp_indsk]] / lD[k]^2
+            } else {
+              r2_gg <- distL[locIDv[grp_indsk], locIDv[grp_indsk]] / lL[k]^2 +
+                distD[dIDv[grp_indsk], dIDv[grp_indsk]] / lD[k]^2
+            }
+
+            r_gg <- sqrt(r2_gg)
+            K_gg <- sigma2[k] * (1 + sqrt(3)*r_gg) * exp(-sqrt(3)*r_gg) +
+              tau2 * diag(ng)
+
+            K_gg <- K_gg + Xg %*% V_alphaMat[1:p,1:p] %*% t(Xg)
+
+            # conditional mean + cov
+            L <- t(chol(K_nn))
+            v <- forwardsolve(L, Z2[nb_indsk] - mn[,1])
+
+            mu_i <- mg + t(K_ng) %*% backsolve(t(L), v)
+            w <- forwardsolve(L, K_ng)
+            cov_i <- K_gg - t(w) %*% w
+
+            # jitter for safety
+            for(ii in 1:ng) cov_i[ii,ii] <- cov_i[ii,ii] + 1e-8
+
+            chol_i <- chol(cov_i)
+            z <- rnorm(ng)
+            draw <- mu_i + chol_i %*% z
+          }
+
+          # assign
+          for(ii in 1:ng){
+            Z2[grp_indsk[ii]] <- draw[ii,1]
+          }
+        }
+      }
+    }
+
+    return(Z2)
+  }
+)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

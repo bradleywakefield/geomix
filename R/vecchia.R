@@ -96,7 +96,7 @@ setupVecchiaGeoMix <- function(locations,
   groups <- as.numeric(factor(groups))
   groupNum <- as.numeric(table(sort(groups)))
   G <- length(groupNum)
-  
+
   if(!is.null(groupMatrix)){
     maxDeps <- ncol(groupMatrix)
     nDeps <- apply(groupMatrix>0,1,sum)
@@ -117,21 +117,21 @@ setupVecchiaGeoMix <- function(locations,
       if(length(y) == 0) y <- which.max(x[1:G])
       if(length(y) == 0) y <- 0
       return(y)
-    } 
+    }
     nDeps <- apply(groupMask,1,find_minimum_group)
     end <- 1:G-nDeps
     groupMatrix <- t(sapply(1:G,function(g) c(g:end[g],rep(0,max(nDeps)-nDeps[g]))))
     maxDeps <- ncol(groupMatrix) - 1
     groupMatrix <- matrix(groupMatrix[,-1],ncol = maxDeps)
   }
-  
-  groupLookup <- data.frame(id=1:N,groups) %>% 
-    group_by(groups) %>% 
-    mutate(ind = 1:n()) %>% 
-    pivot_wider(names_from = ind, values_from = id, values_fill = 0) %>% 
+
+  groupLookup <- data.frame(id=1:N,groups) %>%
+    group_by(groups) %>%
+    mutate(ind = 1:n()) %>%
+    pivot_wider(names_from = ind, values_from = id, values_fill = 0) %>%
     arrange(groups) %>% ungroup() %>% select(!groups) %>% as.matrix()
   mG <- ncol(groupLookup)
-  
+
   groupNeighbours <- matrix(0,nrow = G, ncol = m)
   for(g in 1:G){
     ng <- groupNum[g]
@@ -151,18 +151,18 @@ setupVecchiaGeoMix <- function(locations,
           node     = rep(seq_len(ng), times = m),
           node_id  = rep(group_inds,  times = m),
           order    = rep(seq_len(m), each = ng),
-          cand_id  = query_inds[c(NNlist$nn.ind)], 
+          cand_id  = query_inds[c(NNlist$nn.ind)],
           dist     = c(NNlist$nn.dist)
         )
         max_order <- ceiling(m/ng) + 1
         NNDF_tmp <- filter(NNDF,order <=  max_order)
         candidates <-  unique(NNDF_tmp$cand_id)
-        ncands_upd <- length(candidates) 
+        ncands_upd <- length(candidates)
         while(ncands_upd < m){
           max_order <- max_order + 1
           NNDF_tmp <- filter(NNDF,order <=  max_order)
           candidates <-  sort(unique(NNDF_tmp$cand_id))
-          ncands_upd <- length(candidates) 
+          ncands_upd <- length(candidates)
         }
         if(ncands_upd > m){
           D <- proxy::dist(
@@ -173,19 +173,19 @@ setupVecchiaGeoMix <- function(locations,
         }
       }
       ncands <- length(candidates)
-      groupNeighbours[g,1:ncands] <- candidates     
+      groupNeighbours[g,1:ncands] <- candidates
     }
   }
   if(maxDeps > 5){
-    CgetDependencies <- compileNimble(getDependencies) 
+    CgetDependencies <- suppressMessages(compileNimble(getDependencies))
     groupDeps <- CgetDependencies(cbind(1:G,groupMatrix),G,maxDeps+1)
   }else{
     groupDeps <- getDependencies(cbind(1:G,groupMatrix),G,maxDeps+1)
   }
   groupDepL <- apply(groupDeps != 0,1,sum)
-  
+
   out <- list(constants = list(m = m, G=G, mG = mG), groups = groups,
-              groupNeighbours = groupNeighbours, groupMatrix = groupMatrix, 
+              groupNeighbours = groupNeighbours, groupMatrix = groupMatrix,
               groupLookup = groupLookup, groupNum = groupNum, groupDeps = groupDeps, groupDepL = groupDepL)
   return(out)
 }

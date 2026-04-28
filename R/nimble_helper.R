@@ -105,7 +105,6 @@ getDependencies <- nimble::nimbleFunction(
         maxDep <- count
       }
       if (i %% ceiling(N2*0.01) == 0 | i == N2) {
-        cat("-")
       }
     }
     # Only keep the first maxDep columns

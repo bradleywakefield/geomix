@@ -47,7 +47,6 @@ alphaGroupPostTerms <- nimble::nimbleFunction(
                  LFlag = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2)) {
-
     returnType(alphaGroupPostTermsListDef())
 
     nk <- length(nb_inds)
@@ -162,8 +161,9 @@ alphaGroupPostTerms <- nimble::nimbleFunction(
 alphaGibbsSampler <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,
   setup = function(model, mvSaved, target, control) {
-    m_alpha       <- model$m_alpha
-    Q_alpha       <- model$Q_alpha
+    m_alpha       <- matrix(control$m_alpha,ncol = 1)
+    Q_alpha       <- as.matrix(control$Q_alpha)
+    b0            <- matrix(Q_alpha %*% m_alpha,ncol = 1)
     groupLookup   <- model$groupLookup
     groupNum      <- model$groupNum
     groupNeighbours <- model$groupNeighbours
@@ -171,7 +171,7 @@ alphaGibbsSampler <- nimble::nimbleFunction(
     Z2_ind        <- model$Z2_ind
 
     G <- length(groupNum)
-    p <- length(m_alpha)
+    p <- dim(Q_alpha)[1]
     K <- dim(model$alpha)[1]
 
     calcNodes <- model$getDependencies(target)
@@ -188,11 +188,9 @@ alphaGibbsSampler <- nimble::nimbleFunction(
     Qpost <- array(dim = c(K,p,p))
     bpost <- matrix(nrow = K, ncol = p)
 
-    b <- (Q_alpha %*% m_alpha)[,1]
-
     for(k in 1:K){
       Qpost[k,,] <- Q_alpha
-      bpost[k,] <- b
+      bpost[k,] <- b0
     }
 
     for(j in 1:G){

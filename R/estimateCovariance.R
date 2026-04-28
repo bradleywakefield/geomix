@@ -81,36 +81,65 @@
 #'
 #' @export
 estimate_MAP_covariance <- function(geomix_setup){
-  code <- nimbleCode({
-    # Priors
-    tau2 ~ dinvgamma(a_tau,b_tau)
-    sigma2_L ~ dinvgamma(a_L,b_L)
-    sigma2_D ~ dinvgamma(a_D,b_D)
+  if(geomix_setup$constants$p>1){
+    code <- nimbleCode({
+      # Priors
+      tau2 ~ dinvgamma(a_tau,b_tau)
+      sigma2_L ~ dinvgamma(a_L,b_L)
+      sigma2_D ~ dinvgamma(a_D,b_D)
 
-    #GP params
-    for (k in 1:K) {
-      lL[k] ~ T(dnorm(0, sd = sqrt(sigma2_L)), 0,)
-      lD[k] ~ T(dnorm(0, sd = sqrt(sigma2_D)), 0,)
-      sigma2[k] ~ dinvgamma(a_sigma,b_sigma)
-    }
-    Z2[1:N2] ~ dGPgroupvec_margAlpha(m_alpha = m_alpha[1:p],
-                                     V_alpha =  Q_alpha[1:p, 1:p],
-                                     sigma2 = sigma2[1:K], tau2 = tau2,
-                                     lL = lL[1:K], lD = lD[1:K],
-                                     LFlag = LFlag[1:K],
-                                     Y1 = Y1[1:N1], X = X[1:N2, 1:p], K = K,
-                                     Z2_ind = Z2_ind[1:N2],
-                                     dID = dID[1:N1],locID = locID[1:N1],
-                                     distD = distD[1:D, 1:D],distL = distL[1:L, 1:L],
-                                     m = m, groupLookup = groupLookup[1:G,1:mG],
-                                     groupNum = groupNum[1:G], groupNeighbours = groupNeighbours[1:G,1:m])
+      #GP params
+      for (k in 1:K) {
+        lL[k] ~ T(dnorm(0, sd = sqrt(sigma2_L)), 0,)
+        lD[k] ~ T(dnorm(0, sd = sqrt(sigma2_D)), 0,)
+        sigma2[k] ~ dinvgamma(a_sigma,b_sigma)
+      }
+      Z2[1:N2] ~ dGPgroupvec_margAlpha(m_alpha = m_alpha[1:p],
+                                       V_alpha =  V_alpha[1:p, 1:p],
+                                       sigma2 = sigma2[1:K], tau2 = tau2,
+                                       lL = lL[1:K], lD = lD[1:K],
+                                       LFlag = LFlag[1:K],
+                                       Y1 = Y1[1:N1], X = X[1:N2, 1:p], K = K,
+                                       Z2_ind = Z2_ind[1:N2],
+                                       dID = dID[1:N1],locID = locID[1:N1],
+                                       distD = distD[1:D, 1:D],distL = distL[1:L, 1:L],
+                                       m = m, groupLookup = groupLookup[1:G,1:mG],
+                                       groupNum = groupNum[1:G], groupNeighbours = groupNeighbours[1:G,1:m])
 
-  })
+    })
+  }else{
+    code <- nimbleCode({
+      # Priors
+      tau2 ~ dinvgamma(a_tau,b_tau)
+      sigma2_L ~ dinvgamma(a_L,b_L)
+      sigma2_D ~ dinvgamma(a_D,b_D)
+
+      #GP params
+      for (k in 1:K) {
+        lL[k] ~ T(dnorm(0, sd = sqrt(sigma2_L)), 0,)
+        lD[k] ~ T(dnorm(0, sd = sqrt(sigma2_D)), 0,)
+        sigma2[k] ~ dinvgamma(a_sigma,b_sigma)
+      }
+      Z2[1:N2] ~ dGPgroupvec_margAlphaP1(m_alpha = m_alpha,
+                                       V_alpha =  V_alpha[1, 1],
+                                       sigma2 = sigma2[1:K], tau2 = tau2,
+                                       lL = lL[1:K], lD = lD[1:K],
+                                       LFlag = LFlag[1:K],
+                                       Y1 = Y1[1:N1], X = X[1:N2, 1], K = K,
+                                       Z2_ind = Z2_ind[1:N2],
+                                       dID = dID[1:N1],locID = locID[1:N1],
+                                       distD = distD[1:D, 1:D],distL = distL[1:L, 1:L],
+                                       m = m, groupLookup = groupLookup[1:G,1:mG],
+                                       groupNum = groupNum[1:G], groupNeighbours = groupNeighbours[1:G,1:m])
+
+    })
+  }
 
   geomix_setup$data_list$Y1 <- geomix_setup$data_list$Z1
+  geomix_setup$data_list$V_alpha <- solve(geomix_setup$constants$Q_alpha)
   geomix_setup$inits <- geomix_setup$inits[c('sigma2','tau2','sigma2_L','sigma2_D','lL','lD')]
   K <- geomix_setup$constants$K
-  message('Constructing likelihood....')
+  message('Constructing likelihood....',appendLF = F)
   model <- suppressMessages({nimbleModel(
     code,
     constants   = geomix_setup$constants,
@@ -143,6 +172,7 @@ estimate_MAP_covariance <- function(geomix_setup){
     log(as.numeric(Cmodel$sigma2)),
     log(Cmodel$tau2)
   )
+  message('Done.')
   message('Optimising likelihood....')
   fit <- optim(
     par = par0,
