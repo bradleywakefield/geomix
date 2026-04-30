@@ -17,9 +17,7 @@
 #'
 #' This object is used internally when constructing the GeoMix NIMBLE model.
 #'
-#' @return A `nimbleCode` object defining the GeoMix model.
-#'
-#' @keywords internal
+#' @noRd
 code <- nimble::nimbleCode({
   # Priors
   tau2 ~ dinvgamma(a_tau,b_tau)
@@ -73,9 +71,7 @@ code <- nimble::nimbleCode({
 #'
 #' This object is used internally when constructing the GeoMix NIMBLE model.
 #'
-#' @return A `nimbleCode` object defining the GeoMix model.
-#'
-#' @keywords internal
+#' @noRd
 codep1 <- nimble::nimbleCode({
   # Priors
   tau2 ~ dinvgamma(a_tau,b_tau)
@@ -126,9 +122,7 @@ codep1 <- nimble::nimbleCode({
 #'
 #' This object is used internally when fitting the LGFM variant of the model.
 #'
-#' @return A `nimbleCode` object defining the LGFM model.
-#'
-#' @keywords internal
+#' @noRd
 codeLGFM <- nimble::nimbleCode({
   # Priors
   tau2 ~ dinvgamma(a_tau,b_tau)
@@ -172,9 +166,7 @@ codeLGFM <- nimble::nimbleCode({
 #'
 #' This object is used internally when fitting the LGFM variant of the model.
 #'
-#' @return A `nimbleCode` object defining the LGFM model.
-#'
-#' @keywords internal
+#' @noRd
 codeLGFMp1 <- nimble::nimbleCode({
   # Priors
   tau2 ~ dinvgamma(a_tau,b_tau)

@@ -86,32 +86,55 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Run a single chain
-#' fit <- run_chains(geomix_setup)
+#' data(offshore)
 #'
-#' # Run four chains in parallel
-#' fit <- run_chains(
-#'   geomix_setup,
-#'   nchains = 4,
-#'   run_parallel = TRUE
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
 #' )
 #'
-#' # Save batches to disk
+#' # Single chain
+#' fit <- run_chains(setup, nchains = 1, seed = 42)
+#'
+#' # Two chains in parallel
+#' fit <- run_chains(setup, nchains = 2, run_parallel = TRUE, seed = 42)
+#'
+#' # Access posterior samples
+#' dim(fit$samples$GeoMix_1)   # iterations x parameters
+#'
+#' # Save intermediate batches to disk (useful for long runs)
 #' fit <- run_chains(
-#'   geomix_setup,
-#'   nchains = 2,
-#'   path = "results/mcmc",
+#'   setup,
+#'   nchains     = 2,
+#'   path        = "results/mcmc",
 #'   controlMCMC = list(
-#'     niter = 5000,
-#'     nbatches = 5,
+#'     niter        = 10000,
+#'     thin         = 5,
+#'     nbatches     = 10,
 #'     save_batches = TRUE
-#'   )
+#'   ),
+#'   seed = 42
+#' )
+#'
+#' # Resume a run from the last saved batch
+#' fit2 <- run_chains(
+#'   setup,
+#'   nchains              = 2,
+#'   path                 = "results/mcmc",
+#'   load_previous_state  = TRUE,
+#'   controlMCMC          = list(save_batches = TRUE)
 #' )
 #' }
 #'
-#' @seealso \code{\link[nimble:nimble-package]{nimble}},
-#'   \code{\link[future:plan]{future::plan}},
-#'   \code{\link[future.apply:future_lapply]{future.apply::future_lapply}}
+#' @seealso [setupGeoMixModel()], [extract_parameters()], [load_mcmc_samples()],
+#'   \code{\link[nimble:nimble-package]{nimble}}
 #'
 #' @export
 run_chains <- function(geomix_setup,

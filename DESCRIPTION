@@ -22,6 +22,7 @@ Depends:
     R (>= 4.3.0)
 Imports:
     nimble,
+    methods,
     future,
     future.apply,
     parallel,
@@ -42,6 +43,7 @@ Imports:
 Suggests:
     knitr,
     rmarkdown,
+    patchwork,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3

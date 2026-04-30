@@ -84,31 +84,49 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Predict from one chain
-#' pred <- produce_prediction(samples, geomix_setup)
+#' data(offshore)
 #'
-#' # Predict from multiple chains
-#' pred <- produce_prediction(
-#'   samples = list(chain1, chain2, chain3),
-#'   geomix_setup = geomix_setup
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
 #' )
 #'
-#' # Mean/sd only, no predictive draws
+#' fit <- run_chains(setup, nchains = 2, seed = 42)
+#'
+#' # Predict all 6400 unobserved Z2 locations
+#' pred <- produce_prediction(fit$samples, setup)
+#' length(pred$mean)  # 6400
+#' range(pred$mean)
+#' range(pred$sd)
+#'
+#' # Attach predictions back to the data frame
+#' pred_df <- setup$df |>
+#'   dplyr::filter(is.na(Z2)) |>
+#'   dplyr::mutate(pred_mean = pred$mean, pred_sd = pred$sd)
+#'
+#' # Fast moment-only prediction (no predictive draws)
 #' pred_fast <- produce_prediction(
-#'   samples,
-#'   geomix_setup,
+#'   fit$samples,
+#'   setup,
 #'   include_samples = FALSE
 #' )
 #'
-#' # Predict selected indices only
+#' # Predict a subset of locations
 #' pred_sub <- produce_prediction(
-#'   samples,
-#'   geomix_setup,
-#'   predict_index = c(10, 20, 30)
+#'   fit$samples,
+#'   setup,
+#'   predict_index = which(is.na(offshore$Z2))[1:100]
 #' )
 #' }
 #'
-#' @seealso [extract_parameters()], [parallel::mclapply()]
+#' @seealso [run_chains()], [extract_parameters()], [parallel::mclapply()]
 #'
 #' @export
 produce_prediction <- function(samples,
@@ -122,10 +140,6 @@ produce_prediction <- function(samples,
   is_sample_list <- is.list(samples)
   if(run_parallel & is.null(mc.cores)) mc.cores <- parallel::detectCores()
   build_prediction_inputs <- function(params, geomix_setup, predict_index, nugget = TRUE, include_samples = TRUE) {
-    compiled <- .get_compiled_predictors()
-    CpredictGPvec <- compiled$CpredictGPvec
-    CsampleGPvec <- compiled$CsampleGPvec
-
     if (is.null(predict_index)) {
       predict_index <- which(is.na(geomix_setup$df$Z2))
     }
@@ -189,6 +203,10 @@ produce_prediction <- function(samples,
     if (!is.matrix(samples_chain)) {
       samples_chain <- as.matrix(samples_chain)
     }
+
+    compiled <- .get_compiled_predictors()
+    CpredictGPvec <- compiled$CpredictGPvec
+    CsampleGPvec  <- compiled$CsampleGPvec
 
     cat("\nProcessing samples...\n")
     params <- extract_parameters(samples_chain)

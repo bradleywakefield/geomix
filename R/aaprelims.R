@@ -9,15 +9,24 @@
 #' @import future
 #' @import parallel
 #' @import posterior
-#' @import bayesplot
+#' @importFrom bayesplot mcmc_trace mcmc_acf mcmc_rank_overlay
 #' @importFrom tibble tibble
 #' @importFrom GpGp order_maxmin
 #' @importFrom FNN get.knnx
 #' @importFrom proxy dist
 #' @importFrom clue solve_LSAP
 #' @importFrom abind abind
-#' @importFrom utils head tail
+#' @importFrom methods is
+#' @importFrom stats dnorm model.matrix median optim pnorm qnorm rnorm
+#' @importFrom utils capture.output head modifyList tail
 #' @importFrom magrittr %>%
+
+# Suppress R CMD check notes for NSE variables used in dplyr/ggplot2 pipelines
+utils::globalVariables(c(
+  "latticeID", "rowID", "loc", "x", "y", "minD", "maxD",
+  "ind", "iter", "chain", "Y1count", "param", "mcse_over_sd",
+  "Z2", "logProb", "name", "value", "class", "count"
+))
 
 NULL
 

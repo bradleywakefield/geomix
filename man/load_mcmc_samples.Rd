@@ -54,18 +54,47 @@ each directory.
 }
 \examples{
 \dontrun{
-# Load all batches from all directories beginning with "GeoMix"
-samps <- load_mcmc_samples("results/mcmc")
+data(offshore)
 
-# Load only batches 2 to 5
-samps_sub <- load_mcmc_samples(
-  path = "results/mcmc",
-  name = "GeoMix",
-  index = 2:5
+setup <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula  = ~ d,
+  m         = 10
+)
+
+# Run chains with batch saving enabled
+run_chains(
+  setup,
+  nchains     = 2,
+  path        = "results/mcmc",
+  controlMCMC = list(
+    niter        = 10000,
+    thin         = 5,
+    nbatches     = 10,
+    save_batches = TRUE,
+    retain_draws = FALSE
+  ),
+  seed = 42
+)
+
+# Reload all saved batches
+samples <- load_mcmc_samples("results/mcmc", name = "GeoMix")
+
+# Reload only the last five batches (useful after resuming a run)
+samples_sub <- load_mcmc_samples(
+  path  = "results/mcmc",
+  name  = "GeoMix",
+  index = 6:10
 )
 }
 
 }
 \seealso{
-\code{\link[base:readRDS]{base::readRDS()}}, \code{\link[base:list.files]{base::list.dirs()}}, \code{\link[base:list.files]{base::list.files()}}
+\code{\link[=run_chains]{run_chains()}}, \code{\link[=extract_parameters]{extract_parameters()}}
 }

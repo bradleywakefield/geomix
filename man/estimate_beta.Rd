@@ -76,21 +76,40 @@ interaction parameter for later use in the full GeoMix model.
 }
 \examples{
 \dontrun{
-beta_out <- estimate_beta(geomix_setup)
+data(offshore)
 
-beta_out$estimate
-head(beta_out$samples)
+setup <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula  = ~ d,
+  m         = 10
+)
 
-beta_out2 <- estimate_beta(
-  geomix_setup,
-  niter = 5000,
-  nburnin = 500,
-  thin = 5,
-  nchains = 2
+# Estimate beta from the observed Z1 labels
+beta_out <- estimate_beta(setup)
+beta_out$estimate   # posterior mean
+
+# Use the estimate as the beta argument in setupGeoMixModel()
+setup2 <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula  = ~ d,
+  m         = 10,
+  beta      = beta_out$estimate
 )
 }
 
 }
 \seealso{
-\code{\link[nimble:nimbleModel]{nimble::nimbleModel()}}, \code{\link[nimble:runMCMC]{nimble::runMCMC()}}
+\code{\link[=setupGeoMixModel]{setupGeoMixModel()}}, \code{\link[=run_chains]{run_chains()}}
 }

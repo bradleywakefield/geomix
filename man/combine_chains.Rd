@@ -67,16 +67,34 @@ choosing the class with highest posterior probability at each site.
 }
 \examples{
 \dontrun{
-# Suppose each element is the output of extract_parameters() for one chain
-combined <- combine_chains(list(chain1, chain2, chain3))
+data(offshore)
 
-combined$params$sigma2
-combined$params$Y1[1:10]
+setup <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula  = ~ d,
+  m         = 10
+)
 
-dim(combined$samples$alpha)
+fit <- run_chains(setup, nchains = 2, seed = 42)
+
+# Extract per-chain posteriors then combine
+params_list <- extract_parameters(fit$samples)
+combined    <- combine_chains(params_list)
+
+combined$params$sigma2   # averaged posterior mean variances
+combined$params$Y1[1:10] # pooled modal class at first 10 sites
+table(combined$params$Y1)  # class counts across the full lattice
+
+dim(combined$samples$alpha)  # (total iterations) x K x p
 }
 
 }
 \seealso{
-\code{\link[=extract_parameters]{extract_parameters()}}, \code{\link[abind:abind]{abind::abind()}}
+\code{\link[=extract_parameters]{extract_parameters()}}, \code{\link[=run_mcmc_diagnostics]{run_mcmc_diagnostics()}}, \code{\link[=produce_prediction]{produce_prediction()}}
 }

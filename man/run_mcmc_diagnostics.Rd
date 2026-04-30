@@ -8,10 +8,6 @@ run_mcmc_diagnostics(
   params_list,
   name = "GeoMix",
   exclude = NULL,
-  plot_variables = c("alpha0", "alpha1", "sigma2", "lL", "lD", "tau2", "sigma2_L",
-    "sigma2_D", "gamma", "h", "logProb"),
-  plot_classes = c(1, 2),
-  plot_gamma = rbind(c(1, 2), c(1, 3), c(2, 1), c(2, 3)),
   Y1index = NULL
 )
 }
@@ -24,19 +20,6 @@ Defaults to \code{"GeoMix"}.}
 
 \item{exclude}{Optional character vector of parameter names to exclude from
 diagnostics after chain matrices are constructed. Defaults to \code{NULL}.}
-
-\item{plot_variables}{Character vector specifying parameter groups to include
-in representative diagnostic plots. Defaults to
-\code{c("alpha0","alpha1","sigma2","lL","lD","tau2","sigma2_L","sigma2_D","gamma","h","logProb")}.}
-
-\item{plot_classes}{Integer vector of class indices used when selecting
-class-specific parameters (such as \code{sigma2[k]}, \code{lL[k]}, \code{lD[k]}) for
-plotting. Defaults to \code{c(1,2)}.}
-
-\item{plot_gamma}{Integer matrix with two columns specifying off-diagonal
-gamma parameters to include in plots. Each row corresponds to one
-\code{gammaMat[i,j]} pair. Defaults to
-\code{rbind(c(1,2), c(1,3), c(2,1), c(2,3))}.}
 
 \item{Y1index}{Optional integer vector giving selected lattice indices of
 latent labels \code{Y1} to use when producing class-count trace plots.
@@ -80,9 +63,14 @@ diagnostic report.}
 
 \item{plots}{Diagnostic \code{ggplot2} / \code{bayesplot} objects.}
 \describe{
-\item{trace_acf}{List containing representative trace plots,
-autocorrelation plots, and selected parameter names.}
-\item{rank}{Rank histogram overlay plot for selected parameters.}
+\item{trace_alpha_acf}{List containing representative trace plots and
+autocorrelation plots of the alpha parameters.}
+\item{trace_cov_acf}{List containing representative trace plots and
+autocorrelation plots of the class specific covariance parameters.}
+\item{trace_gamma_acf}{List containing representative trace plots and
+autocorrelation plots of the gamma parameters.}
+\item{trace_other_acf}{List containing representative trace plots and
+autocorrelation plots of the other parameters.}
 \item{logProb}{Trace plots of log-posterior components by chain.}
 \item{Y1}{Trace plots of sampled latent class counts over iterations.}
 }
@@ -120,25 +108,44 @@ A printed summary is emitted via \code{message()} when the function runs.
 }
 \examples{
 \dontrun{
-# Single chain
-out <- run_mcmc_diagnostics(params)
+data(offshore)
 
-# Multiple chains
-out <- run_mcmc_diagnostics(
-  params_list = list(chain1, chain2, chain3),
-  name = "GeoMix",
-  plot_classes = c(1, 4)
+setup <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula  = ~ d,
+  m         = 10
 )
 
-# View worst mixing parameters
-out$tables$worst_rhat
+fit         <- run_chains(setup, nchains = 2, seed = 42)
+params_list <- extract_parameters(fit$samples)
 
-# Print trace plots
-out$plots$trace_acf$trace
+# Run diagnostics across both chains
+diag <- run_mcmc_diagnostics(params_list, name = "GeoMix")
+
+# Convergence summary
+diag$tables$overall_diagnostics
+diag$tables$worst_rhat    # top 10 parameters by R-hat
+diag$tables$worst_ess     # top 10 parameters by lowest bulk ESS
+
+# Class-grouped convergence summary
+diag$tables$class_diagnostics
+
+# Trace and autocorrelation plots
+diag$plots$trace_cov_acf$trace   # covariance parameters
+diag$plots$trace_cov_acf$acf
+diag$plots$trace_alpha_acf$trace  # regression coefficients
+diag$plots$logProb                # log-posterior trace by chain
+diag$plots$Y1                     # latent class count trace
 }
 
 }
 \seealso{
-\code{\link[posterior:rhat]{posterior::rhat()}}, \code{\link[posterior:ess_bulk]{posterior::ess_bulk()}},
-\code{\link[bayesplot:MCMC-traces]{bayesplot::mcmc_trace()}}
+\code{\link[=extract_parameters]{extract_parameters()}}, \code{\link[=combine_chains]{combine_chains()}},
+\code{\link[posterior:rhat]{posterior::rhat()}}, \code{\link[bayesplot:MCMC-traces]{bayesplot::mcmc_trace()}}
 }
