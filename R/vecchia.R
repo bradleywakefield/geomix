@@ -205,7 +205,10 @@ setupVecchiaGeoMix <- function(locations,
     groupDeps <- getDependencies(cbind(1:G,groupMatrix),G,maxDeps+1)
   }
   groupDepL <- apply(groupDeps != 0,1,sum)
-  if(ncol(groupLookup) == 1) groupLookup <- cbind(groupLookup, 0)
+  if(ncol(groupLookup) == 1){
+    groupLookup <- cbind(groupLookup, 0)
+    mG <- mG + 1
+  }
   out <- list(constants = list(m = m, G=G, mG = mG), groups = groups,
               groupNeighbours = groupNeighbours, groupMatrix = groupMatrix,
               groupLookup = groupLookup, groupNum = groupNum, groupDeps = groupDeps, groupDepL = groupDepL)
