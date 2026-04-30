@@ -380,9 +380,9 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
     LFlag = FlagL,
     locStack = locStack,
     X=array(X[Z2ind,],dim = c(N2,p)),
-    groupLookup = vecchia$groupLookup,
-    groupNum = vecchia$groupNum,
-    groupNeighbours = vecchia$groupNeighbours
+    groupLookup = matrix(as.integer(vecchia$groupLookup), nrow = nrow(vecchia$groupLookup)),
+    groupNum = as.integer(vecchia$groupNum),
+    groupNeighbours = matrix(as.integer(vecchia$groupNeighbours), nrow = nrow(vecchia$groupNeighbours))
   )
 
   return(list(
