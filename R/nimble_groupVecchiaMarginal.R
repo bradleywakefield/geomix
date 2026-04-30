@@ -188,8 +188,8 @@ evaluateGroupGPvec_margAlpha <- nimble::nimbleFunction(
                  K = integer(0), Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2)) {
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2)) {
     returnType(double(2))
     G <- length(groupNum)
     logdens <- matrix(0, nrow = G, ncol = K)
@@ -277,8 +277,8 @@ dGPgroupvec_margAlpha <- nimble::nimbleFunction(
                  K = integer(0), Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2),
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2),
                  log = integer(0)) {
     returnType(double(0))
     log_terms <- evaluateGroupGPvec_margAlpha(Z2 = x,
@@ -337,8 +337,8 @@ rGPgroupvec_margAlpha <- nimble::nimbleFunction(
                  K = integer(0), Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2)) {
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2)) {
 
     returnType(double(1))
 
@@ -521,8 +521,8 @@ dGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
                  K = integer(0), Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2),
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2),
                  log = integer(0)) {
     returnType(double(0))
     m_alphaVec <- numeric(1)
@@ -585,8 +585,8 @@ rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
                  K = integer(0), Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2)) {
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2)) {
 
     returnType(double(1))
 
@@ -925,8 +925,8 @@ dGPgroupvec_margAlphak <- nimble::nimbleFunction(
                  Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2),
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2),
                  log = integer(0)) {
     returnType(double(0))
     G <- length(groupNum)
@@ -1003,8 +1003,8 @@ rGPgroupvec_margAlphak <- nimble::nimbleFunction(
                  Z2_ind = double(1),
                  dID = double(1), locID = double(1),
                  distD = double(2), distL = double(2),
-                 m = integer(0), groupLookup = integer(2),
-                 groupNum = integer(1), groupNeighbours = integer(2)) {
+                 m = integer(0), groupLookup = double(2),
+                 groupNum = double(1), groupNeighbours = double(2)) {
 
     returnType(double(1))
 
