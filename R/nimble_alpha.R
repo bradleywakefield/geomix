@@ -206,8 +206,10 @@ alphaGibbsSampler <- nimble::nimbleFunction(
       for(k in 1:K){
         kcheck <- sum(Y1_valid[grp_inds] == k)
         if(kcheck > 0){
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]   ### i -> jg -> i
-          nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)] ### i -> jn -> i
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
+          nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)]
           termList <- alphaGroupPostTerms(k = k,
                                           grp_inds = grp_indsk,
                                           nb_inds = nb_indsk,
