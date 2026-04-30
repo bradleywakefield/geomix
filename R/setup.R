@@ -369,7 +369,7 @@ setupGeoMixModel <- function(data, K, dims, variables = NULL,
   }else{
     FlagL <- rep(1L,K)
   }
-
+  
   data_list <- list(
     Z2 = data[[variables$Z2]][Z2ind],
     Z1 = data[[variables$Z1]],
