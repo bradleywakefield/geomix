@@ -15,6 +15,7 @@
 #'
 #' @return No return value. Copies the current model state to `mvSaved`.
 #'
+#' @export
 #' @keywords internal
 DummySampler <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,

@@ -10,6 +10,7 @@
 #' @return A numeric matrix whose rows give neighbour indices for each lattice
 #' site.
 #'
+#' @export
 #' @keywords internal
 getNeighbours <- nimble::nimbleFunction(
   run = function(dims = double(1),
@@ -83,6 +84,7 @@ getNeighbours <- nimble::nimbleFunction(
 #'
 #' @return A numeric matrix of dependency indices.
 #'
+#' @export
 #' @keywords internal
 getDependencies <- nimble::nimbleFunction(
   run = function(vneighbours = double(2),
@@ -124,6 +126,7 @@ getDependencies <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dDummyCat <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -146,6 +149,7 @@ dDummyCat <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of length `N`.
 #'
+#' @export
 #' @keywords internal
 rDummyCat <- nimble::nimbleFunction(
   run = function(n = integer(0), N = integer(0), logProb = double(0)) {
@@ -168,6 +172,7 @@ rDummyCat <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the Potts log-probability contribution.
 #'
+#' @export
 #' @keywords internal
 computePotts <- nimble::nimbleFunction(
   run = function(beta = double(0), Y1 = double(1), weights = double(2),
@@ -203,6 +208,7 @@ computePotts <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of updated class labels.
 #'
+#' @export
 #' @keywords internal
 samplePotts <- nimble::nimbleFunction(
   run = function(beta = double(0), Y1 = double(1), K = integer(0), weights = double(2),

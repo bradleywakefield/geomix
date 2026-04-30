@@ -8,6 +8,7 @@
 #'
 #' @return A numeric vector giving the optimal assignment permutation.
 #'
+#' @export
 #' @keywords internal
 perm_R <- function(C) {
   as.numeric(clue::solve_LSAP(C, maximum = TRUE))
@@ -21,6 +22,7 @@ perm_R <- function(C) {
 #'
 #' @return A numeric vector giving the optimal assignment permutation.
 #'
+#' @export
 #' @keywords internal
 perm <- nimble::nimbleRcall(
   function(C = double(2)){},
@@ -35,6 +37,7 @@ perm <- nimble::nimbleRcall(
 #'
 #' @return A numeric vector giving the optimal assignment permutation.
 #'
+#' @export
 #' @keywords internal
 hungarian <- nimble::nimbleFunction(
   run = function(C = double(2)) {
@@ -54,6 +57,7 @@ hungarian <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of relabelled latent class assignments.
 #'
+#' @export
 #' @keywords internal
 relabelY1 <- nimble::nimbleFunction(
   run = function(Y1 = double(1), Z1 = double(1),
@@ -87,6 +91,7 @@ relabelY1 <- nimble::nimbleFunction(
 #'
 #' @return No return value. Updates `model$Y1` in place.
 #'
+#' @export
 #' @keywords internal
 GibbsSamplerLGFM <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,
