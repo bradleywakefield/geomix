@@ -186,7 +186,9 @@ evaluateGroupGPvec <- nimble::nimbleFunction(
       for(k in 1:K){
         kcheck <- sum(Y1_valid[grp_inds] == k)
         if(kcheck > 0){
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]   ### i -> jg -> i
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)] ### i -> jn -> i
           mvec <- X %*% asCol(alpha[k,]) ### i
 
@@ -268,7 +270,9 @@ evaluateGroupGPvec_kclass <- nimble::nimbleFunction(
 
         kcheck <- sum(Y1_valid[grp_inds] == k)
         if(kcheck > 0){
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]   ### i -> jg -> i
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)] ### i -> jn -> i
 
           logdens <- logdens + groupGPvec(k = k,
@@ -362,7 +366,9 @@ diffGroupGPvec <- nimble::nimbleFunction(
         if(k != k_old) Y1_valid[i] <- k else Y1_valid[i] <- 0
         kcheck <- sum(Y1_valid[grp_inds] == k)
         if(kcheck > 0){
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]   ### i -> jg -> i
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)] ### i -> jn -> i
           mvec <- X %*% asCol(alpha[k,]) ### i
 
@@ -1210,7 +1216,9 @@ evalGPvecGrad_k <- nimble::nimbleFunction(
 
       kcheck <- sum(Y1_valid[grp_inds] == k)
       if(kcheck > 0){
-        grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]   ### i -> jg -> i
+        grp_which_k <- which(Y1_valid[grp_inds] == k)
+        grp_indsk   <- nimInteger(length(grp_which_k))
+        for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
         nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)] ### i -> jn -> i
 
         loggrad <- groupGPvecGrad(k = k,
