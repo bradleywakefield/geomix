@@ -477,28 +477,19 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
     select(param, class, rhat, ess_bulk, ess_tail, mcse_over_sd) %>%
     head(10)
 
-  key_stats_text <- paste(
-    capture.output({
-      cat("\nMulti-chain diagnostic summary\n")
-      cat("----------------------------------------\n")
-      cat("Number of chains: ", n_chains, "\n", sep = "")
-      cat("Iterations per chain: ", posterior::ndraws(draws_arr) / n_chains, "\n", sep = "")
-      cat("Number of monitored parameters: ", nrow(diag_all), "\n", sep = "")
-
-      cat("\nOverall summary:\n")
-      print(overall_diags)
-
-      cat("\nClass-specific summary:\n")
-      print(class_diags)
-
-      cat("\nWorst 10 parameters by R-hat:\n")
-      print(worst_rhat)
-
-      cat("\nWorst 10 parameters by bulk ESS:\n")
-      print(worst_ess)
-    }),
-    collapse = "\n"
+  key_stats_text <- paste0(
+    "\nMulti-chain diagnostic summary\n",
+    "----------------------------------------\n",
+    "Number of chains: ", n_chains, "\n",
+    "Iterations per chain: ", posterior::ndraws(draws_arr) / n_chains, "\n",
+    "Number of monitored parameters: ", nrow(diag_all), "\n"
   )
+
+  cat(key_stats_text)
+  cat("\nOverall summary:\n");         print(overall_diags)
+  cat("\nClass-specific summary:\n");  print(class_diags)
+  cat("\nWorst 10 parameters by R-hat:\n"); print(worst_rhat)
+  cat("\nWorst 10 parameters by bulk ESS:\n"); print(worst_ess)
 
   ## ------------------------------------------------------------
   ## 4) Representative multi-chain plots
@@ -589,6 +580,5 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
     ),
     plots = plots
   )
-  message(out$summaries$key_stats_text)
   return(out)
 }
