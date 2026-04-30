@@ -68,16 +68,43 @@
 #'
 #' @examples
 #' \dontrun{
-#' map_cov <- estimate_MAP_covariance(geomix_setup)
+#' data(offshore)
 #'
-#' map_cov$lL
-#' map_cov$lD
-#' map_cov$sigma2
-#' map_cov$tau2
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
+#' )
+#'
+#' # Estimate MAP covariance parameters (uses observed Z1 as fixed class labels)
+#' map_cov <- estimate_MAP_covariance(setup)
+#' map_cov$sigma2   # class-specific process variances
+#' map_cov$tau2     # noise variance
+#' map_cov$lL       # lateral length scales
+#' map_cov$lD       # depth length scales
+#'
+#' # Use MAP estimates as initial values for MCMC to improve mixing
+#' setup2 <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10,
+#'   inits     = map_cov
+#' )
 #' }
 #'
-#' @seealso [stats::optim()], [nimble::nimbleModel()],
-#'   [nimble::compileNimble()]
+#' @seealso [setupGeoMixModel()], [run_chains()], [stats::optim()]
 #'
 #' @export
 estimate_MAP_covariance <- function(geomix_setup){

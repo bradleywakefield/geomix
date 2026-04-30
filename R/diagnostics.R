@@ -94,24 +94,44 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Single chain
-#' out <- run_mcmc_diagnostics(params)
+#' data(offshore)
 #'
-#' # Multiple chains
-#' out <- run_mcmc_diagnostics(
-#'   params_list = list(chain1, chain2, chain3),
-#'   name = "GeoMix"
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
 #' )
 #'
-#' # View worst mixing parameters
-#' out$tables$worst_rhat
+#' fit         <- run_chains(setup, nchains = 2, seed = 42)
+#' params_list <- extract_parameters(fit$samples)
 #'
-#' # Print trace plots
-#' out$plots$trace_acf$trace
+#' # Run diagnostics across both chains
+#' diag <- run_mcmc_diagnostics(params_list, name = "GeoMix")
+#'
+#' # Convergence summary
+#' diag$tables$overall_diagnostics
+#' diag$tables$worst_rhat    # top 10 parameters by R-hat
+#' diag$tables$worst_ess     # top 10 parameters by lowest bulk ESS
+#'
+#' # Class-grouped convergence summary
+#' diag$tables$class_diagnostics
+#'
+#' # Trace and autocorrelation plots
+#' diag$plots$trace_cov_acf$trace   # covariance parameters
+#' diag$plots$trace_cov_acf$acf
+#' diag$plots$trace_alpha_acf$trace  # regression coefficients
+#' diag$plots$logProb                # log-posterior trace by chain
+#' diag$plots$Y1                     # latent class count trace
 #' }
 #'
-#' @seealso [posterior::rhat()], [posterior::ess_bulk()],
-#'   [bayesplot::mcmc_trace()]
+#' @seealso [extract_parameters()], [combine_chains()],
+#'   [posterior::rhat()], [bayesplot::mcmc_trace()]
 #'
 #' @export
 #'
@@ -130,9 +150,8 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
                            legend.key.size = unit(0.5,"cm"),
                            axis.text = element_text(size=8),
                            axis.title = element_text(size=10),
-                           legend.title = element_text(size=10),
+                           legend.title = element_text(size=10, hjust=0.5),
                            plot.subtitle = element_text(size=8),
-                           legend.title.align = 0.5,
                            legend.spacing.x  = unit(0.02, "cm"),
                            legend.margin = margin(0,0,0,0),
                            plot.margin = margin(0, 0, 0, 0),
@@ -188,16 +207,17 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
     s <- params$samples
 
     mats <- list(
-      tau2   = to_iter_matrix(s$tau2,   "tau2"),
-      sigma2_L   = to_iter_matrix(s$sigma2_L,   "sigma2_L"),
-      sigma2_D   = to_iter_matrix(s$sigma2_D,   "sigma2_D"),
-      sigma2 = to_iter_matrix(s$sigma2, "sigma2"),
-      lL     = to_iter_matrix(s$lL,     "lL"),
-      lD     = to_iter_matrix(s$lD,     "lD")
+      tau2     = to_iter_matrix(s$tau2,     "tau2"),
+      sigma2_L = to_iter_matrix(s$sigma2_L, "sigma2_L"),
+      sigma2_D = to_iter_matrix(s$sigma2_D, "sigma2_D"),
+      sigma2   = to_iter_matrix(s$sigma2,   "sigma2"),
+      lL       = to_iter_matrix(s$lL,       "lL"),
+      lD       = to_iter_matrix(s$lD,       "lD")
     )
+    p <- dim(s$alpha)[3]
     alpha_list <- list()
     for(j in 1:p){
-      alpha_list[[paste0("alpha",j-1)]] <- s[[paste0("a",j-1)]]
+      alpha_list[[paste0("alpha",j-1)]] <- to_iter_matrix(s[[paste0("a",j-1)]], paste0("alpha",j-1))
     }
     mats <- c(mats,alpha_list)
     if (name != "LGFM") {
@@ -386,7 +406,9 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
       ggtitle(paste0(title_prefix, "Trace plots"))+
       geom_line(alpha = 0.2)+default_theme
 
-    p2 <- bayesplot::mcmc_acf(dsel, lags = 50) +
+    n_iter <- dim(draws_arr)[1]
+    acf_lags <- min(50L, floor(n_iter / 2L) - 1L)
+    p2 <- bayesplot::mcmc_acf(dsel, lags = acf_lags) +
       ggtitle(paste0(title_prefix, "Autocorrelation"))+
       default_theme
 
@@ -559,7 +581,7 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
       overall_diagnostics = overall_diags,
       worst_rhat = worst_rhat,
       worst_ess = worst_ess,
-      Y1count = Y1count
+      Y1count = Y1_count
     ),
     summaries = list(
       key_stats_text = key_stats_text,

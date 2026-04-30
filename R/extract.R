@@ -101,20 +101,39 @@
 #'
 #' @examples
 #' \dontrun{
-#' # From a posterior sample matrix
-#' out <- extract_parameters(samples_mat)
+#' data(offshore)
 #'
-#' names(out$params)
-#' names(out$samples)
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
+#' )
 #'
-#' out$params$sigma2
-#' out$params$Y1prob[1:5, ]
+#' fit <- run_chains(setup, nchains = 2, seed = 42)
 #'
-#' # From a list of chains
-#' out_list <- extract_parameters(list(chain1, chain2, chain3))
+#' # Extract from a single chain's sample matrix
+#' params1 <- extract_parameters(fit$samples$GeoMix_1)
+#'
+#' params1$params$sigma2   # posterior mean class variances
+#' params1$params$tau2     # posterior mean noise variance
+#' params1$params$lL       # posterior mean lateral length scales
+#' params1$params$lD       # posterior mean depth length scales
+#' params1$params$Y1[1:10] # posterior modal class at first 10 sites
+#' params1$params$Y1prob[1:5, ]  # class probabilities at first 5 sites
+#'
+#' # Extract from all chains at once
+#' params_list <- extract_parameters(fit$samples)
+#' params_list$GeoMix_1$params$sigma2
+#' params_list$GeoMix_2$params$sigma2
 #' }
 #'
-#' @seealso [as.matrix()]
+#' @seealso [run_chains()], [combine_chains()], [run_mcmc_diagnostics()]
 #'
 #' @export
 extract_parameters <- function(samples) {
@@ -293,7 +312,7 @@ extract_parameters <- function(samples) {
       colnames(Y1_prob_mat) <- as.character(classes)
       rownames(Y1_prob_mat) <- colnames(Y1_mat)
       
-      output_params[["Y1"]] <- max.col(Y1_prob_mat, ties.method = "first")
+      output_params[["Y1"]] <- unname(max.col(Y1_prob_mat, ties.method = "first"))
       output_params[["Y1prob"]] <- Y1_prob_mat
     }
     return(list(params = output_params, samples = output_samples))

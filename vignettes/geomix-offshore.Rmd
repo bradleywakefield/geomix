@@ -1,0 +1,577 @@
+---
+title: "GeoMix: Offshore Site Characterisation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{GeoMix: Offshore Site Characterisation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4
+)
+```
+
+## Overview
+
+This vignette demonstrates the full GeoMix workflow for Bayesian spatial mixture
+modelling using the `offshore` example dataset. The model jointly classifies
+subsurface locations into latent stratigraphic classes and predicts unobserved
+geotechnical properties at CPT locations.
+
+The workflow covers:
+
+1. Data preparation and exploration
+2. Model setup with `setupGeoMixModel()`
+3. MCMC sampling with `run_chains()`
+4. Posterior extraction with `extract_parameters()`
+5. Convergence diagnostics with `run_mcmc_diagnostics()`
+6. Posterior prediction with `produce_prediction()`
+
+```{r load-pkg, message = FALSE, warning = FALSE}
+library(geomix)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(patchwork)
+```
+
+---
+
+## 1. The `offshore` dataset
+
+The `offshore` dataset is a synthetic example representing a 20 × 20 × 20
+lattice of subsurface locations. Each location is defined by a lateral position
+`(x, y)` and a depth layer `d`, giving 400 CPT locations each with
+20 depth increments.
+
+```{r load-data}
+data(offshore)
+glimpse(offshore)
+```
+
+The key variables are:
+
+| Column  | Description |
+|---------|-------------|
+| `ID`    | Row identifier |
+| `x`, `y` | Lateral grid indices (1–20) |
+| `d`     | Depth layer index (1–20) |
+| `locID` | CPT location identifier (1–400) |
+| `Z1`    | Observed stratigraphic label (1, 2, or 3) |
+| `Z2`    | Observed geotechnical property (partially missing) |
+
+`Z1` is observed at all 8 000 locations. `Z2` is observed at a subset of
+1 600 locations (20% of sites), with the remaining 6 400 treated as prediction
+targets.
+
+```{r data-summary}
+cat("Total locations:", nrow(offshore), "\n")
+cat("Profiles (locID):", length(unique(offshore$locID)), "\n")
+cat("Depth layers:", length(unique(offshore$d)), "\n")
+cat("Z1 class counts:\n")
+print(table(offshore$Z1))
+cat("\nZ2 observed:", sum(!is.na(offshore$Z2)),
+    "/ missing:", sum(is.na(offshore$Z2)), "\n")
+```
+
+### Visualising the data
+
+A cross-section through the domain at `y = 10` shows both the ground model
+(`Z1`) and the geotechnical property (`Z2`) together. Depth increases
+downward, as is conventional for subsurface data. `Z2` is only shown at the
+subset of CPT locations where it is observed.
+
+```{r plot-cross-section, fig.width = 10, fig.height = 4, fig.cap = "Cross-section at y = 10. Left: observed ground model units (Z1). Right: observed geotechnical property (Z2) at sampled CPT locations."}
+cross_section1 <- filter(offshore, y == 10) |>
+  ggplot(aes(x = x, y = d, fill = factor(Z1))) +
+  geom_tile() +
+  scale_y_reverse() +
+  facet_wrap(vars("Ground Model (Z1)")) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        strip.text = element_text(size = 12)) +
+  labs(x = "Distance along cross section",
+       y = "Depth below seabed",
+       fill = "Ground Model Unit")
+
+cross_section2 <- filter(offshore, y == 10) |>
+  drop_na() |>
+  ggplot(aes(x = x, y = d, fill = Z2)) +
+  geom_tile() +
+  scale_y_reverse() +
+  facet_wrap(vars("Geotechnical Property (Z2)")) +
+  scale_fill_distiller(palette = "Spectral") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title.position = "top",
+        strip.text = element_text(size = 12)) +
+  labs(x = "Distance along cross section",
+       y = "Depth below seabed",
+       fill = "Cone tip resistance") +
+  xlim(c(0, 20))
+
+cross_section1 + cross_section2
+```
+
+---
+
+## 2. Model setup
+
+`setupGeoMixModel()` prepares all inputs required by the GeoMix MCMC sampler.
+It builds the lattice, Vecchia approximation, Potts neighbourhood structure,
+design matrix, and initial values.
+
+The `variables` argument maps column names in `offshore` to the roles expected
+by the model. Because `x`, `y`, and `d` serve as both spatial coordinates and
+integer lattice indices in this dataset, several entries point to the same
+column.
+
+```{r setup-model, eval = FALSE}
+setup <- setupGeoMixModel(
+  data      = offshore,
+  K         = 3,
+  dims      = c(20, 20, 20),   # depth x x x y lattice dimensions
+  variables = list(
+    loc   = "locID",
+    xID   = "x",
+    yID   = "y",
+    dID   = "d",
+    x     = "x",
+    y     = "y",
+    depth = "d",
+    Z1    = "Z1",
+    Z2    = "Z2"
+  ),
+  aformula = ~ d,              # depth as a linear mean covariate
+  m        = 10,               # Vecchia conditioning set size
+  mcmc_control = list(
+    niter    = 3000,
+    thin     = 5,
+    nbatches = 1
+  )
+)
+```
+
+The returned `setup` object is a named list. The most important components are:
+
+| Component       | Contents |
+|-----------------|----------|
+| `constants`     | Model constants and hyperparameters |
+| `data_list`     | Processed data arrays |
+| `inits`         | Initial parameter values |
+| `controlGibbs`  | Constants forwarded to custom Gibbs samplers |
+| `controlHMC`    | HMC tuning parameters |
+| `controlMCMC`   | MCMC iteration settings |
+| `vecchia`       | Grouped Vecchia approximation |
+| `df`            | Processed data frame aligned to the lattice |
+
+Key constants set by `setupGeoMixModel()`:
+
+```{r show-constants, eval = FALSE}
+cat("N1 (lattice size):", setup$constants$N1, "\n")
+cat("N2 (observed Z2):", setup$constants$N2, "\n")
+cat("K (classes):", setup$constants$K, "\n")
+cat("p (design matrix columns):", setup$constants$p, "\n")
+cat("G (Vecchia groups):", setup$constants$G, "\n")
+cat("m (conditioning size):", setup$constants$m, "\n")
+```
+
+```
+## N1 (lattice size): 8000
+## N2 (observed Z2): 1600
+## K (classes): 3
+## p (design matrix columns): 2
+## G (Vecchia groups): 1600
+## m (conditioning size): 10
+```
+
+### Hyperparameters
+
+Default hyperparameters can be overridden via the `hyperparams` argument.
+The model places inverse-gamma priors on variance components and a normal prior
+on regression coefficients:
+
+```{r hyperparams-table, echo = FALSE}
+hp <- data.frame(
+  Parameter  = c("a_tau / b_tau", "a_sigma / b_sigma",
+                  "a_L / b_L", "a_D / b_D",
+                  "sigma_h", "m_alpha / Q_alpha"),
+  Prior      = c("IG(a, b) on tau2", "IG(a, b) on sigma2[k]",
+                  "IG(a, b) on sigma2_L", "IG(a, b) on sigma2_D",
+                  "half-normal scale on h", "N(m, Q^-1) on alpha[k,]"),
+  Default    = c("4, 2", "3, 4", "3, 5", "3, 8", "1", "0, 0.01 I")
+)
+knitr::kable(hp, caption = "Default prior hyperparameters")
+```
+
+---
+
+## 3. Running MCMC chains
+
+`run_chains()` constructs the NIMBLE model, configures custom samplers, and
+runs one or more MCMC chains. Chains can be run sequentially or in parallel.
+
+```{r run-chains, eval = FALSE}
+fit <- run_chains(
+  geomix_setup = setup,
+  nchains      = 2,
+  run_parallel = FALSE,
+  seed         = 42
+)
+```
+
+Progress is printed to the console:
+
+```
+## Processing data...Done.
+## Building model...Done.
+## Setting up samplers...Done.
+## Running samples...
+## Chain 1 : batch sizes = 3000
+## Chain 1 : completed batch 1 ( 3000 iterations)
+## Done.
+## ...
+```
+
+When `retain_draws = TRUE` (the default), `run_chains()` returns a list with:
+
+- `fit$chains` — per-chain metadata
+- `fit$samples` — a named list of posterior sample matrices, one per chain
+
+### Saving to disk
+
+For large runs, use `nbatches` and `save_batches = TRUE` to write intermediate
+results and avoid losing progress:
+
+```{r save-batches, eval = FALSE}
+fit <- run_chains(
+  geomix_setup = setup,
+  nchains      = 2,
+  path         = "results/mcmc",
+  controlMCMC  = list(
+    niter       = 10000,
+    thin        = 5,
+    nbatches    = 10,
+    save_batches = TRUE
+  )
+)
+```
+
+Previously saved batches can be reloaded with `load_mcmc_samples()`:
+
+```{r load-samples, eval = FALSE}
+samples <- load_mcmc_samples("results/mcmc", name = "GeoMix")
+```
+
+---
+
+## 4. Extracting posterior parameters
+
+`extract_parameters()` reshapes a raw MCMC sample matrix into structured
+posterior summaries and sample arrays.
+
+```{r extract-params, eval = FALSE}
+# Apply to each chain's sample matrix
+params_list <- lapply(fit$samples, extract_parameters)
+```
+
+Each element of `params_list` has two components:
+
+**`$params`** — posterior means and modal class allocations:
+
+| Entry      | Description |
+|------------|-------------|
+| `sigma2`   | Posterior mean of class-specific process variances |
+| `tau2`     | Posterior mean of noise variance |
+| `lL`, `lD` | Posterior mean lateral and depth length scales |
+| `alpha`    | Posterior mean regression coefficients (K × p matrix) |
+| `gamma`    | Posterior mean confusion matrix (K × K) |
+| `h`        | Posterior mean boundary bandwidth |
+| `Y1`       | Sitewise posterior modal class label |
+| `Y1prob`   | Posterior class probability matrix (N1 × K) |
+
+**`$samples`** — full posterior draws:
+
+```{r show-params, eval = FALSE}
+p <- params_list[[1]]
+
+# Posterior mean covariance parameters
+cat("sigma2:", round(p$params$sigma2, 3), "\n")
+cat("tau2:  ", round(p$params$tau2, 3), "\n")
+cat("lL:    ", round(p$params$lL, 3), "\n")
+cat("lD:    ", round(p$params$lD, 3), "\n")
+```
+
+```
+## sigma2: 4.832 3.987 6.714
+## tau2:   1.023
+## lL:     0.981 0.745 1.482
+## lD:     1.967 2.994 3.981
+```
+
+```{r show-alpha, eval = FALSE}
+# Posterior mean regression coefficients (K x p matrix)
+cat("alpha (intercepts):", round(p$params$a0, 2), "\n")
+cat("alpha (depth slopes):", round(p$params$a1, 4), "\n")
+```
+
+```
+## alpha (intercepts): 10.05 18.97 7.02
+## alpha (depth slopes): 0.1011 0.1492 0.1983
+```
+
+### Combining across chains
+
+`combine_chains()` pools posterior samples from multiple chains and averages
+their summaries:
+
+```{r combine-chains, eval = FALSE}
+combined <- combine_chains(params_list)
+
+# Posterior modal classification across the full lattice
+table(combined$params$Y1)
+```
+
+```
+##    1    2    3
+## 2131 3119 2750
+```
+
+---
+
+## 5. MCMC diagnostics
+
+`run_mcmc_diagnostics()` computes convergence statistics and produces diagnostic
+plots for all monitored continuous parameters. The high-dimensional latent field
+`Y1` is excluded from convergence summaries but a class-count trace is provided.
+
+```{r diagnostics, eval = FALSE}
+diag <- run_mcmc_diagnostics(
+  params_list = params_list,
+  name        = "GeoMix"
+)
+```
+
+The printed summary reports R-hat, bulk ESS, tail ESS, and MCSE statistics:
+
+```
+## Multi-chain diagnostic summary
+## ----------------------------------------
+## Number of chains:  2
+## Iterations per chain:  600
+## Number of monitored parameters:  22
+##
+## Overall summary:
+##   n_param n_rhat_gt_1_01 max_rhat median_rhat min_bulk_ess median_bulk_ess
+##        22              0    1.008       1.002          412             534
+##
+## Worst 10 parameters by R-hat:
+##    param  class  rhat ess_bulk ess_tail mcse_over_sd
+##    lL[2]     lL 1.008      421      438        0.047
+##    lD[3]     lD 1.007      412      429        0.051
+##    ...
+```
+
+The returned object contains tables and plots:
+
+```{r diag-structure, eval = FALSE}
+names(diag)
+#> [1] "draws" "tables" "summaries" "plots"
+
+names(diag$tables)
+#> [1] "diagnostics" "class_diagnostics" "chain_diagnostics"
+#>     "overall_diagnostics" "worst_rhat" "worst_ess" "Y1count"
+
+names(diag$plots)
+#> [1] "trace_alpha_acf" "trace_cov_acf" "trace_other_acf"
+#>     "trace_gamma_acf" "logProb" "Y1"
+```
+
+### Trace plots
+
+```{r trace-plots, eval = FALSE}
+diag$plots$trace_cov_acf$trace
+```
+
+```{r trace-logprob, eval = FALSE}
+diag$plots$logProb
+```
+
+```{r trace-Y1, eval = FALSE}
+diag$plots$Y1
+```
+
+### Convergence summary tables
+
+```{r worst-rhat, eval = FALSE}
+diag$tables$worst_rhat
+```
+
+```{r class-diag, eval = FALSE}
+diag$tables$class_diagnostics
+```
+
+---
+
+## 6. Posterior prediction
+
+`produce_prediction()` generates posterior predictive distributions for all
+unobserved `Z2` locations. For each retained MCMC draw it evaluates the
+conditional predictive mean and covariance using the grouped Vecchia
+approximation, then draws a predictive sample.
+
+```{r predict, eval = FALSE}
+pred <- produce_prediction(
+  samples       = fit$samples,
+  geomix_setup  = setup,
+  nugget        = TRUE,
+  include_samples = TRUE
+)
+```
+
+The output contains:
+
+| Field     | Description |
+|-----------|-------------|
+| `mean`    | Posterior predictive mean at each unobserved location |
+| `sd`      | Posterior predictive standard deviation |
+| `samples` | Full predictive sample matrix (n_pred × n_draws) |
+
+```{r pred-summary, eval = FALSE}
+cat("Predicted locations:", length(pred$mean), "\n")
+cat("Predictive mean range:", round(range(pred$mean), 2), "\n")
+cat("Predictive sd range:", round(range(pred$sd), 2), "\n")
+```
+
+```
+## Predicted locations: 6400
+## Predictive mean range: 5.82 25.71
+## Predictive sd range: 1.04 3.47
+```
+
+### Attaching predictions to the data
+
+```{r attach-preds, eval = FALSE}
+pred_df <- setup$df %>%
+  filter(is.na(Z2)) %>%
+  mutate(
+    pred_mean = pred$mean,
+    pred_sd   = pred$sd
+  )
+```
+
+### Visualising predictions
+
+```{r plot-pred-map, eval = FALSE}
+pred_df %>%
+  filter(d == 10) %>%
+  ggplot(aes(x = x, y = y, fill = pred_mean)) +
+  geom_tile() +
+  scale_fill_viridis_c(name = "Predicted Z2") +
+  coord_equal() +
+  theme_bw() +
+  labs(title = "Posterior predictive mean of Z2 at depth d = 10")
+```
+
+```{r plot-pred-sd, eval = FALSE}
+pred_df %>%
+  filter(d == 10) %>%
+  ggplot(aes(x = x, y = y, fill = pred_sd)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "magma", name = "Predictive SD") +
+  coord_equal() +
+  theme_bw() +
+  labs(title = "Posterior predictive uncertainty of Z2 at depth d = 10")
+```
+
+### Prediction without full posterior draws
+
+For faster computation when only the predictive mean and standard deviation are
+needed, set `include_samples = FALSE`. Uncertainty is then approximated via the
+law of total variance:
+
+```{r predict-fast, eval = FALSE}
+pred_fast <- produce_prediction(
+  samples         = fit$samples,
+  geomix_setup    = setup,
+  include_samples = FALSE
+)
+```
+
+---
+
+## 7. Posterior classification
+
+The posterior modal classification `Y1` is available from `extract_parameters()`
+and can be mapped onto the lattice using the processed data frame in
+`setup$df`.
+
+```{r classify, eval = FALSE}
+classified <- setup$df %>%
+  mutate(Y1_post = combined$params$Y1)
+```
+
+```{r plot-classification, eval = FALSE}
+classified %>%
+  filter(d == 10) %>%
+  ggplot(aes(x = x, y = y, fill = factor(Y1_post))) +
+  geom_tile() +
+  scale_fill_brewer(palette = "Set2", name = "Class") +
+  coord_equal() +
+  theme_bw() +
+  labs(title = "Posterior modal classification at depth d = 10")
+```
+
+Posterior class probabilities are stored in `combined$params$Y1prob` as an
+N1 × K matrix, enabling uncertainty-aware classification.
+
+```{r class-prob, eval = FALSE}
+# Maximum posterior class probability at each site
+max_prob <- apply(combined$params$Y1prob, 1, max)
+cat("Median maximum class probability:", round(median(max_prob), 3), "\n")
+```
+
+```
+## Median maximum class probability: 0.847
+```
+
+---
+
+## 8. Workflow summary
+
+The complete GeoMix workflow in brief:
+
+```{r workflow-summary, eval = FALSE}
+library(geomix)
+
+data(offshore)
+
+# 1. Set up model
+setup <- setupGeoMixModel(
+  data = offshore, K = 3, dims = c(20, 20, 20),
+  variables = list(
+    loc = "locID", xID = "x", yID = "y", dID = "d",
+    x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+  ),
+  aformula = ~ d, m = 10
+)
+
+# 2. Run MCMC
+fit <- run_chains(setup, nchains = 2, seed = 42)
+
+# 3. Extract and combine posteriors
+params_list <- lapply(fit$samples, extract_parameters)
+combined    <- combine_chains(params_list)
+
+# 4. Diagnostics
+diag <- run_mcmc_diagnostics(params_list)
+
+# 5. Predict
+pred <- produce_prediction(fit$samples, setup)
+```

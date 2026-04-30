@@ -71,19 +71,41 @@
 #'
 #' @examples
 #' \dontrun{
-#' locs <- matrix(runif(200), ncol = 2)
-#' grp  <- rep(1:10, each = 10)
+#' data(offshore)
+#'
+#' # Extract observed Z2 locations and their index coordinates from offshore
+#' obs <- subset(offshore, !is.na(Z2))
+#' locs <- obs[, c("d", "x", "y")]   # coordinate columns used for ordering
+#' grps <- seq_len(nrow(obs))         # one observation per group (no grouping)
 #'
 #' V <- setupVecchiaGeoMix(
-#'   locations = locs,
-#'   m = 15,
-#'   groups = grp,
+#'   locations    = locs,
+#'   m            = 10,
+#'   groups       = grps,
 #'   depStructure = "minimal"
+#' )
+#'
+#' # Key output components
+#' V$constants$G    # number of groups
+#' V$constants$m    # conditioning set size
+#' dim(V$groupNeighbours)  # G x m neighbour index matrix
+#'
+#' # Pass a precomputed Vecchia object to setupGeoMixModel() to skip
+#' # recomputation when experimenting with different MCMC settings
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   vecchia   = V
 #' )
 #' }
 #'
-#' @seealso
-#' `setupGeoMixModel()`
+#' @seealso [setupGeoMixModel()]
 #'
 #' @export
 setupVecchiaGeoMix <- function(locations,

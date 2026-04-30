@@ -161,27 +161,51 @@
 #'
 #' @examples
 #' \dontrun{
+#' data(offshore)
+#'
+#' # Basic setup with depth as a linear mean covariate
 #' setup <- setupGeoMixModel(
-#'   data = my_data,
-#'   K = 3,
-#'   dims = c(20, 15, 50),
-#'   aformula = ~ x1 + x2,
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
 #'   variables = list(
-#'     loc = "loc",
-#'     xID = "xID",
-#'     yID = "yID",
-#'     dID = "dID",
-#'     x = "x",
-#'     y = "y",
+#'     loc   = "locID",
+#'     xID   = "x",
+#'     yID   = "y",
+#'     dID   = "d",
+#'     x     = "x",
+#'     y     = "y",
 #'     depth = "d",
-#'     Z1 = "Z1",
-#'     Z2 = "Z2"
-#'   )
+#'     Z1    = "Z1",
+#'     Z2    = "Z2"
+#'   ),
+#'   aformula = ~ d,
+#'   m        = 10
+#' )
+#'
+#' # Inspect key constants
+#' setup$constants$N1   # total lattice size (8000)
+#' setup$constants$N2   # observed Z2 locations (1600)
+#' setup$constants$K    # number of classes (3)
+#'
+#' # Override hyperparameters and initial values
+#' setup2 <- setupGeoMixModel(
+#'   data        = offshore,
+#'   K           = 3,
+#'   dims        = c(20, 20, 20),
+#'   variables   = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula    = ~ d,
+#'   m           = 10,
+#'   hyperparams = list(a_tau = 3, b_tau = 1),
+#'   inits       = list(tau2 = 1, sigma2 = c(4, 4, 7)),
+#'   mcmc_control = list(niter = 5000, thin = 5)
 #' )
 #' }
 #'
-#' @seealso
-#' `setupVecchiaGeoMix()`, `getNeighbours()`
+#' @seealso [setupVecchiaGeoMix()], [run_chains()]
 #'
 #' @export
 setupGeoMixModel <- function(data, K, dims, variables = NULL,

@@ -45,18 +45,47 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Load all batches from all directories beginning with "GeoMix"
-#' samps <- load_mcmc_samples("results/mcmc")
+#' data(offshore)
 #'
-#' # Load only batches 2 to 5
-#' samps_sub <- load_mcmc_samples(
-#'   path = "results/mcmc",
-#'   name = "GeoMix",
-#'   index = 2:5
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
+#' )
+#'
+#' # Run chains with batch saving enabled
+#' run_chains(
+#'   setup,
+#'   nchains     = 2,
+#'   path        = "results/mcmc",
+#'   controlMCMC = list(
+#'     niter        = 10000,
+#'     thin         = 5,
+#'     nbatches     = 10,
+#'     save_batches = TRUE,
+#'     retain_draws = FALSE
+#'   ),
+#'   seed = 42
+#' )
+#'
+#' # Reload all saved batches
+#' samples <- load_mcmc_samples("results/mcmc", name = "GeoMix")
+#'
+#' # Reload only the last five batches (useful after resuming a run)
+#' samples_sub <- load_mcmc_samples(
+#'   path  = "results/mcmc",
+#'   name  = "GeoMix",
+#'   index = 6:10
 #' )
 #' }
 #'
-#' @seealso [base::readRDS()], [base::list.dirs()], [base::list.files()]
+#' @seealso [run_chains()], [extract_parameters()]
 #'
 #' @export
 load_mcmc_samples <- function(path, name = "GeoMix", index = NULL){
@@ -131,16 +160,34 @@ load_mcmc_samples <- function(path, name = "GeoMix", index = NULL){
 #'
 #' @examples
 #' \dontrun{
-#' # Suppose each element is the output of extract_parameters() for one chain
-#' combined <- combine_chains(list(chain1, chain2, chain3))
+#' data(offshore)
 #'
-#' combined$params$sigma2
-#' combined$params$Y1[1:10]
+#' setup <- setupGeoMixModel(
+#'   data      = offshore,
+#'   K         = 3,
+#'   dims      = c(20, 20, 20),
+#'   variables = list(
+#'     loc = "locID", xID = "x", yID = "y", dID = "d",
+#'     x = "x", y = "y", depth = "d", Z1 = "Z1", Z2 = "Z2"
+#'   ),
+#'   aformula  = ~ d,
+#'   m         = 10
+#' )
 #'
-#' dim(combined$samples$alpha)
+#' fit <- run_chains(setup, nchains = 2, seed = 42)
+#'
+#' # Extract per-chain posteriors then combine
+#' params_list <- extract_parameters(fit$samples)
+#' combined    <- combine_chains(params_list)
+#'
+#' combined$params$sigma2   # averaged posterior mean variances
+#' combined$params$Y1[1:10] # pooled modal class at first 10 sites
+#' table(combined$params$Y1)  # class counts across the full lattice
+#'
+#' dim(combined$samples$alpha)  # (total iterations) x K x p
 #' }
 #'
-#' @seealso [extract_parameters()], [abind::abind()]
+#' @seealso [extract_parameters()], [run_mcmc_diagnostics()], [produce_prediction()]
 #'
 #' @export
 combine_chains <- function(x) {
@@ -158,9 +205,7 @@ combine_chains <- function(x) {
     reduce(~ map2(.x, .y, `+`)) |>
     map(~ .x / n_chains)
   
-  avg_params$Y1 <- apply(avg_params$Y1prob, 1, \(z) as.integer(which.max(z)))
-  
-  names(avg_params$Y1) <- rownames(avg_params$Y1prob)
+  avg_params$Y1 <- unname(apply(avg_params$Y1prob, 1, \(z) as.integer(which.max(z))))
   
   # ---------------------------
   # 2. Combine samples
