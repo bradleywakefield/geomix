@@ -23,6 +23,7 @@
 #'
 #' @return A numeric scalar giving the grouped log-density contribution.
 #'
+#' @export
 #' @keywords internal
 groupGPvec_margAlpha <- nimble::nimbleFunction(
   run = function(k = integer(0),
@@ -174,6 +175,7 @@ groupGPvec_margAlpha <- nimble::nimbleFunction(
 #'
 #' @return A numeric matrix of grouped log-density contributions.
 #'
+#' @export
 #' @keywords internal
 evaluateGroupGPvec_margAlpha <- nimble::nimbleFunction(
   run = function(Z2 = double(1),
@@ -260,6 +262,7 @@ evaluateGroupGPvec_margAlpha <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dGPgroupvec_margAlpha <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -319,6 +322,7 @@ dGPgroupvec_margAlpha <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated responses.
 #'
+#' @export
 #' @keywords internal
 rGPgroupvec_margAlpha <- nimble::nimbleFunction(
   run = function(n = integer(0),
@@ -500,6 +504,7 @@ rGPgroupvec_margAlpha <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -563,6 +568,7 @@ dGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated responses.
 #'
+#' @export
 #' @keywords internal
 rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
   run = function(n = integer(0),
@@ -747,6 +753,7 @@ rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the grouped log-density contribution.
 #'
+#' @export
 #' @keywords internal
 groupGPvec_margAlphak <- nimble::nimbleFunction(
   run = function(k = integer(0),
@@ -898,6 +905,7 @@ groupGPvec_margAlphak <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dGPgroupvec_margAlphak <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -975,6 +983,7 @@ dGPgroupvec_margAlphak <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated responses.
 #'
+#' @export
 #' @keywords internal
 rGPgroupvec_margAlphak <- nimble::nimbleFunction(
   run = function(n = integer(0),

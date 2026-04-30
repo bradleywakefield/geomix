@@ -21,6 +21,7 @@
 #'
 #' @return A numeric scalar giving the grouped log-density contribution.
 #'
+#' @export
 #' @keywords internal
 groupGPvec <- nimble::nimbleFunction(
   run = function(k = integer(0),
@@ -154,6 +155,7 @@ groupGPvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric matrix of grouped log-density contributions.
 #'
+#' @export
 #' @keywords internal
 evaluateGroupGPvec <- nimble::nimbleFunction(
   run = function(Z2 = double(1),
@@ -234,6 +236,7 @@ evaluateGroupGPvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the total grouped log-density for class `k`.
 #'
+#' @export
 #' @keywords internal
 evaluateGroupGPvec_kclass <- nimble::nimbleFunction(
   run = function(k = integer(0), Z2 = double(1),
@@ -318,6 +321,7 @@ evaluateGroupGPvec_kclass <- nimble::nimbleFunction(
 #'
 #' @return A numeric matrix of grouped log-density differences.
 #'
+#' @export
 #' @keywords internal
 diffGroupGPvec <- nimble::nimbleFunction(
   run = function(i = integer(0),
@@ -906,6 +910,7 @@ nimble::registerDistributions(list(
 #'
 #' @return A numeric matrix with predictive means and variances.
 #'
+#' @export
 #' @keywords internal
 predictMissingGPvec <- nimble::nimbleFunction(
   run = function(alpha = double(2),
@@ -1032,6 +1037,7 @@ predictMissingGPvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector giving the gradient with respect to `alpha[k, ]`.
 #'
+#' @export
 #' @keywords internal
 groupGPvecGrad <- nimble::nimbleFunction(
   run = function(k = integer(0),
@@ -1172,6 +1178,7 @@ groupGPvecGrad <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector giving the accumulated gradient for class `k`.
 #'
+#' @export
 #' @keywords internal
 evalGPvecGrad_k <- nimble::nimbleFunction(
   run = function(Z2 = double(1),
@@ -1232,6 +1239,7 @@ evalGPvecGrad_k <- nimble::nimbleFunction(
 #' Internal container storing predictive means, standard deviations, and
 #' covariance matrices for grouped Gaussian process predictions.
 #'
+#' @export
 #' @keywords internal
 predictOutputListDef <- nimble::nimbleList(
   mean = double(1),
@@ -1274,6 +1282,7 @@ predictOutputListDef <- nimble::nimbleList(
 #'   \item{cov}{Predictive covariance matrix.}
 #' }
 #'
+#' @export
 #' @keywords internal
 predictGPvec <- nimble::nimbleFunction(
   run = function(pred_inds = double(1),       # indices for prediction
@@ -1420,6 +1429,7 @@ predictGPvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of sampled predictive values.
 #'
+#' @export
 #' @keywords internal
 sampleGPvec <- nimble::nimbleFunction(
   run = function(m = double(1),
