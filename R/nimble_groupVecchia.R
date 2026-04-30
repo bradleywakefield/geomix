@@ -409,6 +409,7 @@ diffGroupGPvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dGPgroupvec <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -460,6 +461,7 @@ dGPgroupvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated responses.
 #'
+#' @export
 #' @keywords internal
 rGPgroupvec <- nimble::nimbleFunction(
   run = function(n = integer(0),
@@ -638,6 +640,7 @@ rGPgroupvec <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dGPgroupvecP1 <- nimble::nimbleFunction(
   run = function(x = double(1),
@@ -691,6 +694,7 @@ dGPgroupvecP1 <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated responses.
 #'
+#' @export
 #' @keywords internal
 rGPgroupvecP1 <- nimble::nimbleFunction(
   run = function(n = integer(0),
