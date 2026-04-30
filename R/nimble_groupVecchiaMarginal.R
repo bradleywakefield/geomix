@@ -27,7 +27,7 @@
 #' @keywords internal
 groupGPvec_margAlpha <- nimble::nimbleFunction(
   run = function(k = integer(0),
-                 grp_inds = double(1),
+                 grp_inds = integer(1),
                  nb_inds = double(1),
                  X = double(2),
                  m_alpha = double(1),
@@ -207,7 +207,9 @@ evaluateGroupGPvec_margAlpha <- nimble::nimbleFunction(
       for(k in 1:K){
         kcheck <- sum(Y1_valid[grp_inds] == k)
         if(kcheck > 0){
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk <- nb_inds[which(Y1_valid[nb_inds] == k)]
 
           logdens[j,k] <- groupGPvec_margAlpha(k = k,
@@ -367,7 +369,9 @@ rGPgroupvec_margAlpha <- nimble::nimbleFunction(
 
         if(kcheck > 0){
 
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk  <- nb_inds[which(Y1_valid[nb_inds] == k)]
 
           ng <- length(grp_indsk)
@@ -617,7 +621,9 @@ rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
 
         if(kcheck > 0){
 
-          grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]
+          grp_which_k <- which(Y1_valid[grp_inds] == k)
+          grp_indsk   <- nimInteger(length(grp_which_k))
+          for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
           nb_indsk  <- nb_inds[which(Y1_valid[nb_inds] == k)]
 
           ng <- length(grp_indsk)
@@ -757,7 +763,7 @@ rGPgroupvec_margAlphaP1 <- nimble::nimbleFunction(
 #' @keywords internal
 groupGPvec_margAlphak <- nimble::nimbleFunction(
   run = function(k = integer(0),
-                 grp_inds = double(1),
+                 grp_inds = integer(1),
                  nb_inds = double(1),
                  X = double(2),
                  m_alpha = double(1),
@@ -1027,7 +1033,9 @@ rGPgroupvec_margAlphak <- nimble::nimbleFunction(
 
       if(kcheck > 0){
 
-        grp_indsk <- grp_inds[which(Y1_valid[grp_inds] == k)]
+        grp_which_k <- which(Y1_valid[grp_inds] == k)
+        grp_indsk   <- nimInteger(length(grp_which_k))
+        for(ii in 1:length(grp_which_k)) { grp_indsk[ii] <- grp_inds[grp_which_k[ii]] }
         nb_indsk  <- nb_inds[which(Y1_valid[nb_inds] == k)]
 
         ng <- length(grp_indsk)
