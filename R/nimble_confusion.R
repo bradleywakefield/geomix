@@ -115,6 +115,7 @@ proposePiStack <- nimble::nimbleFunction(
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dConfuse <- nimble::nimbleFunction(
   run = function(x = double(1),               # Z1[1:N1]
@@ -174,6 +175,7 @@ dConfuse <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated observed class labels.
 #'
+#' @export
 #' @keywords internal
 rConfuse <- nimble::nimbleFunction(
   run = function(n = integer(0),               # Z1[1:N1]

@@ -16,6 +16,7 @@
 #'
 #' @return A numeric scalar giving the density or log-density.
 #'
+#' @export
 #' @keywords internal
 dPotts <- nimble::nimbleFunction(
   run = function(x = double(1), Z1 = double(1), K = integer(0), beta = double(0),
@@ -58,6 +59,7 @@ dPotts <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of simulated class labels.
 #'
+#' @export
 #' @keywords internal
 rPotts <- nimble::nimbleFunction(
   run = function(n = integer(0), Z1 = double(1), K = integer(0), beta = double(0),
