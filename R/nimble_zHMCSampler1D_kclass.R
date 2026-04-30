@@ -31,6 +31,7 @@
 #'
 #' @return No return value. Updates the target node in `model` in place.
 #'
+#' @export
 #' @keywords internal
 HMCSample1D_kZ2 <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,

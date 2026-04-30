@@ -2,6 +2,7 @@
 #'
 #' Internal container storing posterior precision and linear terms.
 #'
+#' @export
 #' @keywords internal
 alphaGroupPostTermsListDef <- nimble::nimbleList(
   Q = double(2),
@@ -35,6 +36,7 @@ alphaGroupPostTermsListDef <- nimble::nimbleList(
 #'   \item{b}{Posterior linear term contribution vector.}
 #' }
 #'
+#' @export
 #' @keywords internal
 alphaGroupPostTerms <- nimble::nimbleFunction(
   run = function(k = integer(0),
@@ -157,6 +159,7 @@ alphaGroupPostTerms <- nimble::nimbleFunction(
 #'
 #' @return No return value. Updates `model$alpha` in place.
 #'
+#' @export
 #' @keywords internal
 alphaGibbsSampler <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,

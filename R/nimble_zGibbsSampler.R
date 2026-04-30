@@ -26,6 +26,7 @@
 #'
 #' @return No return value. Updates `model$Y1` in place.
 #'
+#' @export
 #' @keywords internal
 GibbsSampler <- nimble::nimbleFunction(
   contains = nimble::sampler_BASE,
