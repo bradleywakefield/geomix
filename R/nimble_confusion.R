@@ -13,6 +13,7 @@
 #'
 #' @return A numeric matrix of stack-specific misclassification probabilities.
 #'
+#' @export
 #' @keywords internal
 computePiStack <- nimble::nimbleFunction(
   run = function(loc0 = integer(0), loc1 = integer(0), Y1Stack = double(1),
@@ -61,6 +62,7 @@ computePiStack <- nimble::nimbleFunction(
 #'
 #' @return A numeric vector of normalised log proposal probabilities.
 #'
+#' @export
 #' @keywords internal
 proposePiStack <- nimble::nimbleFunction(
   run = function(s = integer(0), loc0 = integer(0), loc1 = integer(0),
