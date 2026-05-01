@@ -513,13 +513,25 @@ run_mcmc_diagnostics <- function(params_list, name = "GeoMix",
 
   if(is.null(Y1index)) Y1index <- 1:ncol(params_list[[1]]$samples$Y1)
 
-  logProb <- imap(params_list, ~ data.frame(
-    iter      = seq_along(.x$samples$logProb),
-    logProb   = .x$samples$logProb,
-    logProbZ1 = .x$samples$logProbZ1,
-    logProbZ2 = .x$samples$logProbZ2,
-    chain     = .y
-  )) %>% bind_rows()
+  logProb <- imap(params_list, ~ {
+    s <- .x$samples
+    
+    n <- max(
+      length(s$logProb %||% NULL),
+      length(s$logProbZ1 %||% NULL),
+      length(s$logProbZ2 %||% NULL),
+      0
+    )
+    
+    data.frame(
+      iter      = seq_len(n),
+      logProb   = s$logProb   %||% rep(NA_real_, n),
+      logProbZ1 = s$logProbZ1 %||% rep(NA_real_, n),
+      logProbZ2 = s$logProbZ2 %||% rep(NA_real_, n),
+      chain     = .y
+    )
+  }) %>% 
+    bind_rows()
 
   Y1_count <- lapply(seq_along(params_list), function(i) {
     Y1 <- params_list[[i]]$samples$Y1[,Y1index]
