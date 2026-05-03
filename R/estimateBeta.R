@@ -112,17 +112,12 @@ estimate_beta <- function(geomix_setup, niter = 2000, nburnin = 250, thin = 10, 
   message("Building model for beta...",appendLF = F)
   bmodel <- suppressMessages({
     nimbleModel(beta_code, constants = beta_constants, data = beta_data,
-                        inits = list(beta=0.5), buildDerivs = F)
+                        inits = list(beta=1), buildDerivs = F)
   })
   Cbmodel <- suppressMessages({compileNimble(bmodel)})
   message('Done.')
   message("Setting up samplers...",appendLF = F)
   bconf <- configureMCMC(Cbmodel,print = FALSE)
-  bconf$replaceSampler(
-    target  = "beta",
-    type    = HMCSample1D_logFD,
-    control = geomix_setup$controlHMC
-  )
   bmcmc <- buildMCMC(bconf)
   Cbmcmc <- suppressMessages({compileNimble(bmcmc)})
   message('Done.')
