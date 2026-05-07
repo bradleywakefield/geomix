@@ -20,6 +20,10 @@
 #'   numeric batch index. Defaults to `NULL`, in which case all available
 #'   batches are loaded.
 #'
+#' @param thin Optional positive integer. If supplied, every `thin`-th row is
+#'   retained from the combined sample matrix (i.e. rows `thin`, `2*thin`,
+#'   `3*thin`, ...). Defaults to `NULL` (no thinning).
+#'
 #' @return A list with one element per matching subdirectory. Each element is
 #'   the result of row-binding the selected batch objects read via `readRDS()`.
 #'   In typical use, each element will be a posterior sample matrix or similar
@@ -83,21 +87,34 @@
 #'   name  = "GeoMix",
 #'   index = 6:10
 #' )
+#'
+#' # Reload all batches but keep every 5th iteration
+#' samples_thin <- load_mcmc_samples(
+#'   path = "results/mcmc",
+#'   name = "GeoMix",
+#'   thin = 5
+#' )
 #' }
 #'
 #' @seealso [run_chains()], [extract_parameters()]
 #'
 #' @export
-load_mcmc_samples <- function(path, name = "GeoMix", index = NULL){
+load_mcmc_samples <- function(path, name = "GeoMix", index = NULL, thin = NULL){
   dirs <- list.dirs(path, full.names = FALSE)
   dirs <- dirs[grepl(paste0("^",name), dirs)]
-  samples <- lapply(dirs,function(dir){
-    batches <- list.files(file.path(path,dir),pattern = "batch",full.names = T)
-    batches <- batches[order(as.numeric(str_remove(str_extract(batches,"batch\\_\\d+"),"batch\\_")))]
+  samples <- lapply(dirs, function(dir){
+    batches <- list.files(file.path(path, dir), pattern = "batch", full.names = TRUE)
+    batches <- batches[order(as.numeric(str_remove(str_extract(batches, "batch\\_\\d+"), "batch\\_")))]
     nbatches <- length(batches)
     if(is.null(index)) index <- 1:nbatches
-    do.call(rbind,lapply(batches[index],readRDS))
-  }) 
+    mat <- do.call(rbind, lapply(batches[index], readRDS))
+    if(!is.null(thin)){
+      thin <- as.integer(thin)
+      keep <- seq(thin, nrow(mat), by = thin)
+      mat <- mat[keep, , drop = FALSE]
+    }
+    mat
+  })
 }
 
 #' Combine extracted MCMC outputs across chains
