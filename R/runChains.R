@@ -294,7 +294,7 @@ run_chains <- function(geomix_setup,
           unname(grab_node(last, "alpha")),
           nrow = K,
           ncol = geomix_local$constants$p,
-          byrow = TRUE
+          byrow = FALSE   # saved columns are in column-major order: alpha[1, 1], alpha[2, 1], ...
         ),
         sigma2   = unname(grab_node(last, "sigma2")),
         lL       = unname(grab_node(last, "lL")),
@@ -303,7 +303,7 @@ run_chains <- function(geomix_setup,
           unname(grab_node(last, "gammaMat")),
           nrow = K,
           ncol = K,
-          byrow = TRUE
+          byrow = FALSE
         ),
         Y1LogProb = 1,
         Y1 = unname(grab_node(last, "Y1"))
